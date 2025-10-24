@@ -1,0 +1,25 @@
+# AWS SDK
+boto3==1.34.44
+botocore==1.34.44
+
+# Web framework for container deployment
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+a2wsgi==1.10.10
+
+# Authentication and security
+PyJWT==2.8.0
+python-multipart==0.0.6
+
+# Data validation and serialization
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Utilities
+python-dotenv==1.0.0
+
+# Security and validation
+email-validator==2.1.0
+
+# HTTP client
+requests==2.31.0

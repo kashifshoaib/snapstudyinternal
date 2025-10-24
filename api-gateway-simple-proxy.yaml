@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Simple API Gateway HTTPS proxy for SnapStudy Elastic Beanstalk backend'
+
+Parameters:
+  BackendUrl:
+    Type: String
+    Default: 'snapstudy-backend-env.eba-ygmxm24z.us-east-1.elasticbeanstalk.com'
+    Description: 'Elastic Beanstalk environment URL (without http://)'
+  
+  StageName:
+    Type: String
+    Default: 'prod'
+    Description: 'API Gateway stage name'
+
+Resources:
+  # API Gateway REST API
+  SnapStudyAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: 'SnapStudy-Backend-HTTPS-Proxy'
+      Description: 'HTTPS API Gateway proxy to Elastic Beanstalk backend'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      BinaryMediaTypes:
+        - '*/*'  # Support file uploads and all content types
+
+  # API Gateway Resource for proxy paths
+  ProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      ParentId: !GetAtt SnapStudyAPI.RootResourceId
+      PathPart: '{proxy+}'
+
+  # HTTP Integration for proxy resource - let backend handle CORS
+  ProxyIntegration:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      ResourceId: !Ref ProxyResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.proxy: true
+      Integration:
+        Type: HTTP_PROXY
+        IntegrationHttpMethod: ANY
+        Uri: !Sub 'http://${BackendUrl}/{proxy}'
+        RequestParameters:
+          integration.request.path.proxy: 'method.request.path.proxy'
+        PassthroughBehavior: WHEN_NO_MATCH
+
+  # HTTP Integration for root resource - let backend handle CORS
+  RootIntegration:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      ResourceId: !GetAtt SnapStudyAPI.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: HTTP_PROXY
+        IntegrationHttpMethod: ANY
+        Uri: !Sub 'http://${BackendUrl}/'
+        PassthroughBehavior: WHEN_NO_MATCH
+
+  # API Gateway Deployment
+  APIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ProxyIntegration
+      - RootIntegration
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      StageName: !Ref StageName
+
+Outputs:
+  ApiGatewayUrl:
+    Description: 'HTTPS API Gateway URL for SnapStudy backend'
+    Value: !Sub 'https://${SnapStudyAPI}.execute-api.${AWS::Region}.amazonaws.com/${StageName}'
+    Export:
+      Name: 'SnapStudy-ApiGatewayUrl'
+  
+  ApiGatewayId:
+    Description: 'API Gateway ID'
+    Value: !Ref SnapStudyAPI
+    Export:
+      Name: 'SnapStudy-ApiGatewayId'
+  
+  BackendProxyUrl:
+    Description: 'Backend URL being proxied'
+    Value: !Sub 'http://${BackendUrl}'
+    Export:
+      Name: 'SnapStudy-BackendUrl'

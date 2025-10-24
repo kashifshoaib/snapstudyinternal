@@ -1,0 +1,286 @@
+{
+  "version": "32.0.0",
+  "artifacts": {
+    "SnapStudyStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "SnapStudyStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "SnapStudyStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://054037102331/us-east-1",
+      "properties": {
+        "templateFile": "SnapStudyStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::054037102331:role/cdk-hnb659fds-deploy-role-054037102331-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::054037102331:role/cdk-hnb659fds-cfn-exec-role-054037102331-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-054037102331-us-east-1/370244a3379ae67c536852c26be6b3fd8d7f755de851a17c10f930af3029b0d4.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "SnapStudyStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::054037102331:role/cdk-hnb659fds-lookup-role-054037102331-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "SnapStudyStack.assets"
+      ],
+      "metadata": {
+        "/SnapStudyStack/UsersTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "UsersTable9725E9C8"
+            }
+          }
+        ],
+        "/SnapStudyStack/UsersTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UsersTable9725E9C8"
+          }
+        ],
+        "/SnapStudyStack/LessonsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "LessonsTableA5C40CCF"
+            }
+          }
+        ],
+        "/SnapStudyStack/LessonsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LessonsTableA5C40CCF"
+          }
+        ],
+        "/SnapStudyStack/MicroLessonsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "MicroLessonsTable9D50E5AF"
+            }
+          }
+        ],
+        "/SnapStudyStack/MicroLessonsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MicroLessonsTable9D50E5AF"
+          }
+        ],
+        "/SnapStudyStack/QuizzesTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "QuizzesTableEED0CE4A"
+            }
+          }
+        ],
+        "/SnapStudyStack/QuizzesTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "QuizzesTableEED0CE4A"
+          }
+        ],
+        "/SnapStudyStack/UserEngagementTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "UserEngagementTableC354F7C0"
+            }
+          }
+        ],
+        "/SnapStudyStack/UserEngagementTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserEngagementTableC354F7C0"
+          }
+        ],
+        "/SnapStudyStack/ChatHistoryTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ChatHistoryTableA22BA13C"
+            }
+          }
+        ],
+        "/SnapStudyStack/ChatHistoryTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ChatHistoryTableA22BA13C"
+          }
+        ],
+        "/SnapStudyStack/ContentBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ContentBucket52D4B12C"
+          }
+        ],
+        "/SnapStudyStack/UserPool/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPool6BA7E5F2"
+          }
+        ],
+        "/SnapStudyStack/UserPoolClient/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolClient2F5918F7"
+          }
+        ],
+        "/SnapStudyStack/RestApi/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RestApi0C43BF4B"
+          }
+        ],
+        "/SnapStudyStack/RestApi/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RestApiCloudWatchRoleE3ED6605"
+          }
+        ],
+        "/SnapStudyStack/RestApi/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RestApiAccount7C83CF5A"
+          }
+        ],
+        "/SnapStudyStack/RestApi/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RestApiDeployment180EC503a33bb382a7df41b949a0f8adad62904f"
+          }
+        ],
+        "/SnapStudyStack/RestApi/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RestApiDeploymentStageprod3855DE66"
+          }
+        ],
+        "/SnapStudyStack/RestApi/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RestApiEndpoint0551178A"
+          }
+        ],
+        "/SnapStudyStack/RestApi/Default/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RestApiOPTIONS6AA64D2D"
+          }
+        ],
+        "/SnapStudyStack/AuthLambdaRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthLambdaRole36829CEF"
+          }
+        ],
+        "/SnapStudyStack/ApiGatewayLogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayLogGroupA9770429"
+          }
+        ],
+        "/SnapStudyStack/LambdaLogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LambdaLogGroup2CA1C11F"
+          }
+        ],
+        "/SnapStudyStack/UserPoolId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolId"
+          }
+        ],
+        "/SnapStudyStack/UserPoolClientId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolClientId"
+          }
+        ],
+        "/SnapStudyStack/RestApiUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RestApiUrl"
+          }
+        ],
+        "/SnapStudyStack/ContentBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ContentBucketName"
+          }
+        ],
+        "/SnapStudyStack/UsersTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UsersTableName"
+          }
+        ],
+        "/SnapStudyStack/LessonsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LessonsTableName"
+          }
+        ],
+        "/SnapStudyStack/MicroLessonsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MicroLessonsTableName"
+          }
+        ],
+        "/SnapStudyStack/QuizzesTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "QuizzesTableName"
+          }
+        ],
+        "/SnapStudyStack/UserEngagementTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserEngagementTableName"
+          }
+        ],
+        "/SnapStudyStack/ChatHistoryTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ChatHistoryTableName"
+          }
+        ],
+        "/SnapStudyStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/SnapStudyStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/SnapStudyStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "SnapStudyStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}

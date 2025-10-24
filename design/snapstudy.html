@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SnapStudy – Themed UI (Consistent Popups + Smaller Send)</title>
+<link rel="icon" type="image/png" href="weblogo.png" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --snap-050:#f6f3ff; --snap-100:#e9ddff; --snap-200:#d8c6ff; --snap-300:#a78bfa;
+  --snap-500:#7c3aed; --snap-600:#6a1ee8; --snap-700:#5a19c5; --snap-900:#3b107d;
+  --surface:#ffffff; --border:#00000014; --text:#1e1e2e; --muted:#6c6c6c;
+  --shadow:0 12px 40px rgba(60,25,120,.22);
+}
+
+html,body{height:100%;}
+body{
+  margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  color:var(--text);
+  background:linear-gradient(180deg,var(--snap-050),#e9ddff);
+  overflow:hidden;
+}
+
+/* Header */
+header{
+  height:64px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px; background:#fff;
+  border-bottom:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+header .brand{display:flex; align-items:center; gap:10px;}
+header .brand img{height:40px; width:auto; object-fit:contain;}
+header .brand span{font-weight:700; font-size:18px; color:var(--snap-900);}
+nav{display:flex; gap:8px;}
+nav button{
+  background:none; border:none; padding:6px 10px; border-radius:8px;
+  color:var(--snap-700); font-weight:500; font-size:14px; cursor:pointer;
+}
+nav button:hover{background:var(--snap-100);}
+
+/* App grid */
+.app{
+  height:calc(100vh - 64px - 18px);
+  display:grid; grid-template-columns:240px 1fr 320px;
+}
+.panel{
+  display:flex; flex-direction:column; background:var(--surface);
+  border-right:1px solid var(--border);
+}
+.panel:last-child{border-right:none; border-left:1px solid var(--border);}
+.panel-header{
+  padding:12px 14px; font-weight:600; color:var(--snap-900);
+  border-bottom:1px solid var(--border);
+}
+.panel-body{padding:12px; min-height:0; overflow:auto;}
+
+/* LEFT: My Lessons */
+.list{display:flex; flex-direction:column; gap:6px;}
+.row{
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:10px; transition:background .2s;
+}
+.row:hover{background:var(--snap-100);}
+.row .icon{width:18px; display:flex; align-items:center; justify-content:center;}
+.row .title{flex:1; font-size:14px;}
+.icon.gray{color:#9aa0a6;}
+.icon.green{color:#10b981;}
+
+/* Upload (+) */
+.plus-btn{
+  border:none; background:none; cursor:pointer;
+  padding:4px 8px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
+}
+.plus-btn:hover{background:var(--snap-100);}
+.plus-btn svg{fill:none; stroke:var(--snap-700); transition:stroke .2s;}
+.plus-btn:hover svg{stroke:var(--snap-500);}
+
+/* MIDDLE */
+.panel.main{
+  position:relative; border-right:none;
+  background:
+    radial-gradient(600px 300px at 10% -10%, rgba(124,58,237,0.10), transparent 60%),
+    radial-gradient(700px 320px at 110% 0%, rgba(90,25,197,0.08), transparent 60%),
+    #ffffff;
+}
+.card{
+  background:#fff; border:1px solid var(--border); border-radius:14px;
+  padding:12px 14px; box-shadow:0 2px 6px rgba(0,0,0,.05); margin-bottom:12px;
+}
+.card h3{margin:0 0 6px; font-size:16px; color:var(--snap-900);}
+.card p{margin:0; font-size:14px;}
+.actions{display:flex; align-items:center; gap:10px; margin-top:10px;}
+.icon-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  background:#fff; border:1px solid var(--border); padding:6px 10px;
+  border-radius:10px; cursor:pointer; font-size:14px; color:var(--snap-700);
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.icon-btn:hover{border-color:var(--snap-300); color:var(--snap-500); box-shadow:0 2px 6px rgba(124,58,237,.18);}
+.icon-btn .meta{font-size:12px; color:var(--muted);}
+.ico{width:16px; height:16px; display:inline-block;}
+.ico svg{width:100%; height:100%; fill:var(--snap-700); transition:fill .2s;}
+.icon-btn:hover .ico svg{fill:var(--snap-500);}
+
+/* RIGHT: Tutor */
+.panel.tutor .panel-body{
+  padding:0; overflow:hidden; display:flex; flex-direction:column; min-height:0;
+  position:relative;
+}
+.thread{
+  flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:8px;
+  background:radial-gradient(700px 320px at -10% 110%, rgba(124,58,237,0.06), transparent 60%), #fff;
+}
+.bubble{max-width:90%; padding:10px 12px; border-radius:12px; font-size:14px; box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.bubble.ai{background:#faf7ff; color:#3a2b6b;}
+.bubble.me{background:#f2ecff;}
+.tutor-input{
+  position:sticky; bottom:0; z-index:1;
+  display:flex; gap:8px; padding:10px 12px 16px 12px;
+  background:#fff; border-top:1px solid var(--border);
+}
+.tutor-input input{
+  flex:1; border:1px solid var(--border); border-radius:10px;
+  padding:10px 12px; font-size:14px;
+}
+
+/* Floating Send Button (smaller icon + alignment) */
+.fab-send{
+  position:absolute; right:18px; bottom:18px;
+  z-index:2; width:42px; height:42px;
+  border-radius:50%; border:none; cursor:pointer;
+  background:linear-gradient(135deg,var(--snap-500),var(--snap-700));
+  color:#fff; box-shadow:0 8px 24px rgba(90,25,197,.35);
+  display:flex; align-items:center; justify-content:center;
+}
+.fab-send:hover{filter:brightness(1.08);}
+.fab-send svg{fill:#fff; width:15px; height:15px;} /* reduced size for better alignment */
+
+/* Footer */
+footer{
+  height:18px; display:flex; align-items:center; justify-content:center;
+  background:#fff; border-top:1px solid var(--border);
+  font-size:11px; color:var(--snap-700);
+}
+
+/* Themed Modals */
+.modal{
+  display:none; position:fixed; inset:0;
+  background:linear-gradient(180deg, rgba(59,16,125,0.12), rgba(124,58,237,0.12));
+  backdrop-filter:blur(3px);
+  align-items:center; justify-content:center; z-index:100;
+}
+.modal.show{display:flex; animation:fade .2s ease;}
+@keyframes fade{from{opacity:0} to{opacity:1}}
+.modal-card{
+  background:radial-gradient(800px 380px at -10% -20%, rgba(124,58,237,0.08), transparent 60%), #ffffff;
+  border:1px solid var(--border);
+  border-radius:16px; width:min(720px,92vw);
+  padding:16px 18px 20px; box-shadow:var(--shadow);
+}
+.modal-title{
+  margin:0 0 8px; color:var(--snap-900); font-size:18px; font-weight:700;
+  display:flex; align-items:center; gap:8px;
+}
+.modal-title .ico svg{width:18px; height:18px; fill:var(--snap-700);}
+.modal-actions{display:flex; gap:8px; margin-top:12px;}
+.btn{
+  border:1px solid var(--border); background:#fff; color:var(--snap-700);
+  border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:500;
+}
+.btn.primary{
+  background:linear-gradient(90deg,var(--snap-500),var(--snap-700));
+  color:#fff; border:none;
+}
+.btn:hover{box-shadow:0 2px 8px rgba(124,58,237,.20);}
+.modal-close{
+  position:absolute; top:10px; right:12px; font-size:18px;
+  border:none; background:transparent; cursor:pointer; color:#333;
+}
+textarea.input-area{
+  width:100%; min-height:120px; resize:vertical;
+  border:1px solid var(--border); border-radius:10px;
+  padding:10px 12px; font-size:14px;
+}
+.kbd{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  background:#f7f2ff; border:1px solid var(--border); border-radius:6px; padding:2px 6px; font-size:12px; color:var(--snap-700);
+}
+</style>
+</head>
+<body>
+
+<!-- SVG defs (icons reused everywhere for consistency) -->
+<svg width="0" height="0" style="position:absolute;visibility:hidden">
+  <symbol id="ico-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
+  <symbol id="ico-audio" viewBox="0 0 24 24"><path d="M14 3.23v17.54c0 .79-.9 1.27-1.54.82L7 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h3l5.46-3.59c.64-.45 1.54.03 1.54.82z"/></symbol>
+  <symbol id="ico-quiz" viewBox="0 0 24 24"><path d="M20 2H8a2 2 0 0 0-2 2v3H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3h2a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Zm-4 18H4V9h12Zm4-5h-2V9a2 2 0 0 0-2-2H8V4h12Z"/></symbol>
+  <symbol id="ico-summary" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V8h4.5L14 3.5ZM8 11h8v2H8v-2Zm0 4h8v2H8v-2Z"/></symbol>
+  <symbol id="ico-check" viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></symbol>
+  <symbol id="ico-video-gray" viewBox="0 0 24 24"><path d="M17 10.5V7a2 2 0 0 0-2-2H4C2.9 5 2 5.9 2 7v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5l5 3.5V7l-5 3.5z"/></symbol>
+  <symbol id="ico-paper-plane" viewBox="0 0 24 24"><path d="M2 21l20-9L2 3l5 8-5 10zm7-7 11-2-11-2 0 4z"/></symbol>
+  <symbol id="ico-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+</svg>
+
+<header>
+  <div class="brand">
+    <img src="weblogo.png" alt="SnapStudy logo" />
+    <span>SnapStudy</span>
+  </div>
+  <nav>
+    <button>Dashboard</button>
+    <button>Analytics</button>
+  </nav>
+</header>
+
+<div class="app">
+  <!-- LEFT -->
+  <section class="panel" aria-label="My Lessons">
+    <div class="panel-header" style="display:flex; align-items:center; justify-content:space-between;">
+      <span>My Library</span>
+      <button class="plus-btn" title="Upload New Lesson" onclick="openModal('uploadModal')">
+        <svg viewBox="0 0 24 24" width="20" height="20"><use href="#ico-plus"/></svg>
+      </button>
+    </div>
+    <div class="panel-body">
+      <div class="list">
+        <div class="row">
+          <div class="icon green"><svg width="18" height="18"><use href="#ico-check"/></svg></div>
+          <div class="title">Neural Nets 101</div>
+        </div>
+        <div class="row">
+          <div class="icon gray"><svg width="18" height="18"><use href="#ico-video-gray"/></svg></div>
+          <div class="title">Reinforcement Learning</div>
+        </div>
+        <div class="row">
+          <div class="icon gray"><svg width="18" height="18"><use href="#ico-video-gray"/></svg></div>
+          <div class="title">Vector Databases</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MIDDLE -->
+  <main class="panel main" aria-label="Lesson Viewer">
+    <div class="panel-header">My Snaps</div>
+    <div class="panel-body">
+      <div class="card">
+        <h3>Recap</h3>
+        <p>Cosine similarity measures how close two vectors are in direction—great for comparing text embeddings.</p>
+        <div class="actions">
+          <button class="icon-btn" onclick="openModal('vid1')">
+            <span class="ico"><svg><use href="#ico-play"/></svg></span><span>Video</span><span class="meta">2:45</span>
+          </button>
+          <button class="icon-btn" onclick="openModal('aud1')">
+            <span class="ico"><svg><use href="#ico-audio"/></svg></span><span>Audio</span><span class="meta">1:10</span>
+          </button>
+          <button class="icon-btn" onclick="openQuiz('Cosine Similarity')">
+            <span class="ico"><svg><use href="#ico-quiz"/></svg></span><span>Quiz</span>
+          </button>
+          <button class="icon-btn" onclick="openSummary('Cosine similarity measures the angle between vectors; values closer to 1 indicate stronger semantic alignment.')">
+            <span class="ico"><svg><use href="#ico-summary"/></svg></span><span>Summary</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Approximate Nearest Neighbor (ANN)</h3>
+        <p>ANN indexes (HNSW, IVF-Flat) trade exactness for speed, enabling scalable similarity search with low latency.</p>
+        <div class="actions">
+          <button class="icon-btn" onclick="openModal('vid2')">
+            <span class="ico"><svg><use href="#ico-play"/></svg></span><span>Video</span><span class="meta">3:30</span>
+          </button>
+          <button class="icon-btn" onclick="openModal('aud2')">
+            <span class="ico"><svg><use href="#ico-audio"/></svg></span><span>Audio</span><span class="meta">1:25</span>
+          </button>
+          <button class="icon-btn" onclick="openQuiz('ANN trade-offs and indexes')">
+            <span class="ico"><svg><use href="#ico-quiz"/></svg></span><span>Quiz</span>
+          </button>
+          <button class="icon-btn" onclick="openSummary('ANN accelerates search by exploring a subset of the space; structures like HNSW offer good recall at low latency.')">
+            <span class="ico"><svg><use href="#ico-summary"/></svg></span><span>Summary</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT -->
+  <aside class="panel tutor" aria-label="Tutor">
+    <div class="panel-header">Study Buddy</div>
+    <div class="panel-body">
+      <div class="thread" id="thread">
+        <div class="bubble ai">👋 Hi! Ask me to summarize, explain, or quiz you on this lesson.</div>
+        <div class="bubble me">Give me a 2-sentence summary.</div>
+        <div class="bubble ai">ANN speeds up similarity search by approximating nearest neighbors. It preserves accuracy with much lower latency.</div>
+      </div>
+      <div class="tutor-input">
+        <input id="msg" placeholder="Type a message…" aria-label="Type a message" />
+      </div>
+      <button class="fab-send" title="Send" aria-label="Send" onclick="sendMsg()">
+        <svg><use href="#ico-paper-plane"/></svg>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<footer>Powered by AWS Cloud Services</footer>
+
+<!-- Upload Modal -->
+<div id="uploadModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-card" role="document">
+    <button class="modal-close" onclick="closeModal('uploadModal')" aria-label="Close">✖</button>
+    <h3 class="modal-title"><span class="ico"><svg><use href="#ico-plus"/></svg></span> Upload Lesson</h3>
+    <input type="file" id="fileUpload" />
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('uploadModal')">Cancel</button>
+      <button class="btn primary" onclick="fakeUpload()">Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Modal -->
+<div id="summaryModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-card" role="document">
+    <button class="modal-close" onclick="closeModal('summaryModal')" aria-label="Close">✖</button>
+    <h3 class="modal-title"><span class="ico"><svg><use href="#ico-summary"/></svg></span> Summary</h3>
+    <div id="summaryContent" style="font-size:14px; line-height:1.55;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="copySummary()">Copy</button>
+      <button class="btn primary" onclick="closeModal('summaryModal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quiz Modal -->
+<div id="quizModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-card" role="document">
+    <button class="modal-close" onclick="closeModal('quizModal')" aria-label="Close">✖</button>
+    <h3 class="modal-title"><span class="ico"><svg><use href="#ico-quiz"/></svg></span> Quick Quiz</h3>
+    <div id="quizBody" style="display:flex; flex-direction:column; gap:10px;">
+      <!-- injected quiz content -->
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('quizModal')">Close</button>
+      <button class="btn primary" onclick="gradeQuiz()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Media Modals -->
+<div id="vid1" class="modal" aria-hidden="true">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('vid1')" aria-label="Close">✖</button>
+    <h3 class="modal-title"><span class="ico"><svg><use href="#ico-play"/></svg></span> Video</h3>
+    <video controls style="width:100%"><source src="sample1.mp4" type="video/mp4" /></video>
+  </div>
+</div>
+<div id="aud1" class="modal" aria-hidden="true">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('aud1')" aria-label="Close">✖</button>
+    <h3 class="modal-title"><span class="ico"><svg><use href="#ico-audio"/></svg></span> Audio</h3>
+    <audio controls style="width:100%"><source src="sample1.mp3" type="audio/mp3" /></audio>
+  </div>
+</div>
+<div id="vid2" class="modal" aria-hidden="true">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('vid2')" aria-label="Close">✖</button>
+    <h3 class="modal-title"><span class="ico"><svg><use href="#ico-play"/></svg></span> Video</h3>
+    <video controls style="width:100%"><source src="sample2.mp4" type="video/mp4" /></video>
+  </div>
+</div>
+<div id="aud2" class="modal" aria-hidden="true">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('aud2')" aria-label="Close">✖</button>
+    <h3 class="modal-title"><span class="ico"><svg><use href="#ico-audio"/></svg></span> Audio</h3>
+    <audio controls style="width:100%"><source src="sample2.mp3" type="audio/mp3" /></audio>
+  </div>
+</div>
+
+<script>
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+function sendMsg(){
+  const input=document.getElementById('msg');
+  const text=(input.value||'').trim(); if(!text) return;
+  const thread=document.getElementById('thread');
+  const me=document.createElement('div'); me.className='bubble me'; me.textContent=text; thread.appendChild(me);
+  input.value=''; thread.scrollTop=thread.scrollHeight;
+  setTimeout(()=>{
+    const ai=document.createElement('div'); ai.className='bubble ai';
+    ai.textContent='🤖 Here’s a concise reply to: '+text; thread.appendChild(ai);
+    thread.scrollTop=thread.scrollHeight;
+  },500);
+}
+
+/* Upload -> mock add to list */
+function fakeUpload(){
+  const inp=document.getElementById('fileUpload');
+  if(!inp.files || !inp.files.length){closeModal('uploadModal');return;}
+  const name=inp.files[0].name;
+  const list=document.querySelector('.panel[aria-label="My Lessons"] .list');
+  const row=document.createElement('div');
+  row.className='row';
+  row.innerHTML = `
+    <div class="icon gray"><svg width="18" height="18"><use href="#ico-video-gray"/></svg></div>
+    <div class="title">${name.replace(/\.[^/.]+$/, '')}</div>
+  `;
+  list.prepend(row);
+  closeModal('uploadModal');
+}
+
+/* Summary modal */
+function openSummary(text){
+  const el=document.getElementById('summaryContent');
+  el.textContent=text || 'No summary available.';
+  openModal('summaryModal');
+}
+function copySummary(){
+  const text=document.getElementById('summaryContent').textContent;
+  navigator.clipboard.writeText(text);
+}
+
+/* Quiz modal (simple demo) */
+function openQuiz(topic){
+  const qz=document.getElementById('quizBody');
+  qz.innerHTML = `
+    <div>
+      <div style="font-weight:600; color:var(--snap-900);">1) Which metric compares vector orientation?</div>
+      <label><input type="radio" name="q1" value="cosine"> Cosine similarity</label><br/>
+      <label><input type="radio" name="q1" value="euclid"> Euclidean distance</label><br/>
+      <label><input type="radio" name="q1" value="manhattan"> Manhattan distance</label>
+    </div>
+    <div>
+      <div style="font-weight:600; color:var(--snap-900);">2) ANN primarily trades ___ for speed.</div>
+      <label><input type="radio" name="q2" value="recall"> Recall</label><br/>
+      <label><input type="radio" name="q2" value="precision"> Precision</label><br/>
+      <label><input type="radio" name="q2" value="exactness"> Exactness</label>
+    </div>
+    <div class="kbd">Topic: ${topic}</div>
+  `;
+  openModal('quizModal');
+}
+function gradeQuiz(){
+  const q1=document.querySelector('input[name="q1"]:checked')?.value;
+  const q2=document.querySelector('input[name="q2"]:checked')?.value;
+  let score=0;
+  if(q1==='cosine') score++;
+  if(q2==='exactness') score++;
+  alert('Score: '+score+'/2');
+  closeModal('quizModal');
+}
+
+/* Keyboard shortcuts */
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && (document.activeElement.id==='msg' || e.metaKey || e.ctrlKey)){
+    sendMsg();
+  }
+  if(e.key==='Escape'){
+    document.querySelectorAll('.modal.show').forEach(m=>m.classList.remove('show'));
+  }
+});
+</script>
+</body>
+</html>

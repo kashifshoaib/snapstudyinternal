@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # SnapStudy Backend
+  snapstudy-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      # DynamoDB table names (from existing infrastructure)
+      - USERS_TABLE=${USERS_TABLE:-SnapStudy-Users}
+      - LESSONS_TABLE=${LESSONS_TABLE:-SnapStudy-Lessons}
+      - MICRO_LESSONS_TABLE=${MICRO_LESSONS_TABLE:-SnapStudy-MicroLessons}
+      - QUIZZES_TABLE=${QUIZZES_TABLE:-SnapStudy-Quizzes}
+      - USER_ENGAGEMENT_TABLE=${USER_ENGAGEMENT_TABLE:-SnapStudy-UserEngagement}
+      - CHAT_HISTORY_TABLE=${CHAT_HISTORY_TABLE:-SnapStudy-ChatHistory}
+      # S3 and Cognito (from existing infrastructure)
+      - CONTENT_BUCKET=${CONTENT_BUCKET}
+      - USER_POOL_ID=${USER_POOL_ID}
+      - USER_POOL_CLIENT_ID=${USER_POOL_CLIENT_ID}
+    volumes:
+      - ./backend/src:/app/src  # For development hot reload
+    networks:
+      - snapstudy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SnapStudy Frontend
+  snapstudy-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_USER_POOL_ID=${USER_POOL_ID}
+      - REACT_APP_USER_POOL_CLIENT_ID=${USER_POOL_CLIENT_ID}
+      - REACT_APP_AWS_REGION=${AWS_REGION:-us-east-1}
+    volumes:
+      - ./frontend/src:/app/src  # For development hot reload
+      - ./frontend/public:/app/public
+    networks:
+      - snapstudy-network
+    depends_on:
+      - snapstudy-backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  snapstudy-network:
+    driver: bridge
+
+# For production deployment, use separate docker-compose.prod.yml

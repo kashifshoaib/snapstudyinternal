@@ -1,0 +1,23 @@
+{
+  "name": "snapstudy-infrastructure",
+  "version": "1.0.0",
+  "description": "AWS CDK infrastructure for SnapStudy platform",
+  "main": "lib/snapstudy-stack.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "deploy": "cdk deploy",
+    "destroy": "cdk destroy",
+    "synth": "cdk synth"
+  },
+  "devDependencies": {
+    "@types/node": "18.14.6",
+    "aws-cdk": "2.87.0",
+    "typescript": "~4.9.5"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.87.0",
+    "constructs": "^10.0.0"
+  }
+}

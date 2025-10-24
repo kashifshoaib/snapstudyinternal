@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for SnapStudy frontend + API proxy via CloudFront'
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: aws-hackathon-snapstudy
+    Description: Name of the S3 bucket for hosting the frontend
+    AllowedPattern: '^[a-z0-9][a-z0-9-]*[a-z0-9]$'
+    ConstraintDescription: Bucket name must be lowercase, alphanumeric, and can contain hyphens
+
+Resources:
+  # ------------------------------
+  # S3 Bucket (Frontend Hosting)
+  # ------------------------------
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # ------------------------------
+  # Origin Access Control for S3
+  # ------------------------------
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${BucketName}-OAC'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+    # ------------------------------
+    # CloudFront Distribution
+    # ------------------------------
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub 'CloudFront distribution for ${BucketName} + Beanstalk API proxy'
+        DefaultRootObject: index.html
+
+        Origins:
+          # --- API Gateway backend (HTTPS) ---
+          - Id: APIGatewayOrigin
+            DomainName: 1w0yyb3an4.execute-api.us-east-1.amazonaws.com
+            OriginPath: /prod
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              HTTPSPort: 443
+              OriginSSLProtocols: ['TLSv1.2']
+
+          # --- S3 frontend ---
+          - Id: S3Origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+            OriginAccessControlId: !Ref OriginAccessControl
+
+        # --- Cache behaviors ---
+        CacheBehaviors:
+          # 1️⃣ API first (higher priority)
+          - PathPattern: '/api/*'
+            TargetOriginId: APIGatewayOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'PATCH', 'DELETE']
+            CachedMethods: ['GET', 'HEAD']
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # Disable caching
+            OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # AllViewerExceptHostHeader
+            ResponseHeadersPolicyId: 5cc3b908-e619-4b99-88e5-2cf7f45965bd # SimpleCORS
+
+        # --- Default (everything else → frontend) ---
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+          CachedMethods: ['GET', 'HEAD']
+          Compress: true
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad     # Disable caching
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+          ResponseHeadersPolicyId: 5cc3b908-e619-4b99-88e5-2cf7f45965bd # SimpleCORS
+
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        HttpVersion: http2
+
+Outputs:
+  BucketName:
+    Description: Name of the S3 bucket
+    Value: !Ref FrontendBucket
+
+  CloudFrontDomainName:
+    Description: CloudFront Domain Name
+    Value: !GetAtt CloudFrontDistribution.DomainName
+
+  CloudFrontURL:
+    Description: Full CloudFront URL
+    Value: !Sub 'https://${CloudFrontDistribution.DomainName}'
+
+  DeploymentInstructions:
+    Description: Deployment steps
+    Value: !Sub |
+      1. Upload frontend build files:
+         aws s3 sync build/ s3://${FrontendBucket}/
+      2. Access app:
+         https://${CloudFrontDistribution.DomainName}
+      3. API base URL (use this in UI):
+         https://${CloudFrontDistribution.DomainName}/api/
+      4. Invalidate CloudFront cache after update:
+         aws cloudfront create-invalidation --distribution-id ${CloudFrontDistribution} --paths "/*"

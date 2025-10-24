@@ -1,0 +1,20 @@
+{
+  "version": "32.0.0",
+  "files": {
+    "370244a3379ae67c536852c26be6b3fd8d7f755de851a17c10f930af3029b0d4": {
+      "source": {
+        "path": "SnapStudyStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "054037102331-us-east-1": {
+          "bucketName": "cdk-hnb659fds-assets-054037102331-us-east-1",
+          "objectKey": "370244a3379ae67c536852c26be6b3fd8d7f755de851a17c10f930af3029b0d4.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::054037102331:role/cdk-hnb659fds-file-publishing-role-054037102331-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

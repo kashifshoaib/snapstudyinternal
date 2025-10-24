@@ -1,0 +1,341 @@
+.progress-charts {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.progress-charts h3 {
+  margin: 0 0 30px 0;
+  color: #212529;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Charts Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 25px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.chart-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Circular Progress */
+.circular-progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circular-chart {
+  transform: rotate(-90deg);
+}
+
+.progress-circle {
+  transition: stroke-dashoffset 0.5s ease-in-out;
+}
+
+.circular-progress-content {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.circular-progress-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #212529;
+  line-height: 1;
+}
+
+.circular-progress-label {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* Progress Bars */
+.progress-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.progress-bar-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.progress-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.progress-label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.progress-value {
+  font-weight: 700;
+  color: #212529;
+  font-size: 14px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease-in-out;
+}
+
+.progress-percentage {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* Detailed Charts */
+.detailed-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.chart-section {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.chart-section h4 {
+  margin: 0 0 20px 0;
+  color: #212529;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Activity Chart */
+.activity-chart {
+  text-align: center;
+}
+
+.activity-bars {
+  display: flex;
+  justify-content: space-around;
+  align-items: end;
+  gap: 15px;
+  height: 200px;
+  padding: 20px 0;
+}
+
+.activity-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 80px;
+}
+
+.activity-bar-container {
+  width: 40px;
+  height: 150px;
+  background: #e9ecef;
+  border-radius: 4px;
+  display: flex;
+  align-items: end;
+  overflow: hidden;
+}
+
+.activity-bar-fill {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease-in-out;
+  min-height: 4px;
+}
+
+.activity-bar-label {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.activity-bar-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #212529;
+}
+
+/* Velocity Trend */
+.velocity-trend {
+  text-align: center;
+}
+
+.trend-chart {
+  display: flex;
+  justify-content: space-around;
+  align-items: end;
+  gap: 10px;
+  height: 150px;
+  padding: 20px 0;
+}
+
+.trend-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 60px;
+}
+
+.trend-bar-container {
+  width: 30px;
+  height: 100px;
+  background: #e9ecef;
+  border-radius: 4px;
+  display: flex;
+  align-items: end;
+  overflow: hidden;
+}
+
+.trend-bar-fill {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease-in-out;
+  min-height: 4px;
+}
+
+.trend-bar-label {
+  font-size: 11px;
+  color: #6c757d;
+  font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .detailed-charts {
+    gap: 25px;
+  }
+}
+
+@media (max-width: 768px) {
+  .progress-charts {
+    padding: 20px;
+  }
+  
+  .progress-charts h3 {
+    font-size: 20px;
+  }
+  
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .chart-card {
+    padding: 20px;
+  }
+  
+  .circular-progress-value {
+    font-size: 18px;
+  }
+  
+  .circular-progress-label {
+    font-size: 11px;
+  }
+  
+  .activity-bars, .trend-chart {
+    gap: 10px;
+    height: 120px;
+  }
+  
+  .activity-bar-container {
+    width: 30px;
+    height: 100px;
+  }
+  
+  .trend-bar-container {
+    width: 25px;
+    height: 80px;
+  }
+  
+  .activity-bar-value {
+    font-size: 14px;
+  }
+  
+  .activity-bar-label, .trend-bar-label {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-bar-header {
+    flex-direction: column;
+    gap: 5px;
+    text-align: center;
+  }
+  
+  .activity-bars {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 15px;
+  }
+  
+  .activity-bar-item {
+    min-width: 60px;
+  }
+  
+  .trend-chart {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 10px;
+  }
+}

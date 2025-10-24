@@ -1,0 +1,591 @@
+/* Professional Analytics Dashboard */
+.analytics-dashboard {
+  padding: 2rem;
+  background: #f8f9fa;
+  min-height: 100%;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.dashboard-header h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.period-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.period-selector label {
+  font-weight: 600;
+  color: #5a19c5;
+}
+
+.period-selector select {
+  padding: 8px 16px;
+  border: 2px solid #a78bfa;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.period-selector select:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+/* Metrics Cards Grid */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #7c3aed;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(124, 58, 237, 0.15);
+}
+
+.metric-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e9ddff, #d8c6ff);
+  border-radius: 12px;
+}
+
+.metric-icon svg {
+  width: 32px;
+  height: 32px;
+  fill: #5a19c5;
+}
+
+.metric-content {
+  flex: 1;
+}
+
+.metric-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #5a19c5;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.metric-label {
+  font-size: 14px;
+  color: #6c6c6c;
+  font-weight: 500;
+}
+
+/* Dashboard Grid Layout */
+.dashboard-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+/* Cards */
+.velocity-card,
+.retention-card,
+.patterns-card,
+.struggling-concepts-card,
+.recommendations-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.velocity-card h3,
+.retention-card h3,
+.patterns-card h3,
+.struggling-concepts-card h3,
+.recommendations-card h3 {
+  margin: 0 0 1.5rem 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #3b107d;
+  padding-bottom: 0.75rem;
+  border-bottom: 3px solid #e9ddff;
+}
+
+/* Velocity Content */
+.velocity-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pace-indicator {
+  text-align: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(124, 58, 237, 0.1));
+  border-radius: 12px;
+  border: 2px dashed #a78bfa;
+}
+
+.pace-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.pace-icon svg {
+  width: 48px;
+  height: 48px;
+  fill: currentColor;
+}
+
+.pace-text {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.velocity-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.velocity-stat {
+  text-align: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: #5a19c5;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #6c6c6c;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.activity-score {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.activity-bar {
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.activity-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #5a19c5);
+  border-radius: 12px;
+  transition: width 0.5s ease;
+}
+
+.activity-label {
+  display: block;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5a19c5;
+}
+
+/* Retention Content */
+.retention-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.streak-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.streak-stat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(124, 58, 237, 0.1));
+  border-radius: 12px;
+}
+
+.streak-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streak-icon svg {
+  width: 40px;
+  height: 40px;
+  fill: #ff6f00;
+}
+
+.streak-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.streak-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #5a19c5;
+  line-height: 1;
+}
+
+.streak-label {
+  font-size: 13px;
+  color: #6c6c6c;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.consistency-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.consistency-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: white;
+  border: 2px solid #e9ddff;
+  border-radius: 8px;
+}
+
+.consistency-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b107d;
+}
+
+.consistency-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #5a19c5;
+}
+
+/* Learning Patterns */
+.patterns-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.pattern-tag {
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, #e9ddff, #d8c6ff);
+  color: #3b107d;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 2px solid #a78bfa;
+}
+
+/* Struggling Concepts Table */
+.concepts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.concept-item {
+  padding: 1.25rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #f44336;
+  transition: all 0.3s;
+}
+
+.concept-item:hover {
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateX(4px);
+}
+
+.concept-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.concept-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3b107d;
+}
+
+.concept-score {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f44336;
+}
+
+.concept-details {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 13px;
+  color: #6c6c6c;
+}
+
+.attempts {
+  font-weight: 600;
+}
+
+.trend {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.trend svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.trend.improving {
+  color: #4caf50;
+}
+
+/* Recommendations */
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recommendation-item {
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  border-left: 4px solid;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s;
+}
+
+.recommendation-item:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateX(4px);
+}
+
+.recommendation-item.priority-high {
+  border-left-color: #f44336;
+  background: linear-gradient(to right, rgba(244, 67, 54, 0.05), white);
+}
+
+.recommendation-item.priority-medium {
+  border-left-color: #ff9800;
+  background: linear-gradient(to right, rgba(255, 152, 0, 0.05), white);
+}
+
+.recommendation-item.priority-low {
+  border-left-color: #4caf50;
+  background: linear-gradient(to right, rgba(76, 175, 80, 0.05), white);
+}
+
+.recommendation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.recommendation-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3b107d;
+}
+
+.priority-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.priority-badge.priority-high {
+  background: #f44336;
+  color: white;
+}
+
+.priority-badge.priority-medium {
+  background: #ff9800;
+  color: white;
+}
+
+.priority-badge.priority-low {
+  background: #4caf50;
+  color: white;
+}
+
+.recommendation-description {
+  margin: 0 0 0.75rem 0;
+  color: #1e1e2e;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.recommendation-meta {
+  display: flex;
+  gap: 1rem;
+}
+
+.recommendation-type {
+  font-size: 12px;
+  color: #6c6c6c;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Dashboard Footer */
+.dashboard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e0e0e0;
+}
+
+.last-updated {
+  font-size: 13px;
+  color: #6c6c6c;
+  margin: 0;
+}
+
+.refresh-button,
+.retry-button {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.refresh-button svg,
+.retry-button svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.refresh-button:hover,
+.retry-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(167, 139, 250, 0.4);
+  background: linear-gradient(135deg, #8b5cf6, #6a1ee8);
+}
+
+/* Loading and Error States */
+.analytics-dashboard.loading,
+.analytics-dashboard.error,
+.analytics-dashboard.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+}
+
+.error-message h3,
+.empty-state h3 {
+  color: #3b107d;
+  font-size: 24px;
+  margin-bottom: 0.5rem;
+}
+
+.error-message p,
+.empty-state p {
+  color: #6c6c6c;
+  font-size: 16px;
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive Analytics */
+@media (max-width: 768px) {
+  .analytics-dashboard {
+    padding: 1rem;
+  }
+
+  .metrics-row {
+    grid-template-columns: 1fr;
+  }
+
+  .velocity-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .streak-info,
+  .consistency-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-footer {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}

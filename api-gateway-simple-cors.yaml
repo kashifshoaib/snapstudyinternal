@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Simple API Gateway with local OPTIONS handling'
+
+Parameters:
+  BackendUrl:
+    Type: String
+    Default: 'snapstudy-backend-env.eba-ygmxm24z.us-east-1.elasticbeanstalk.com'
+    Description: 'Elastic Beanstalk environment URL (without http://)'
+  
+  StageName:
+    Type: String
+    Default: 'prod'
+    Description: 'API Gateway stage name'
+
+Resources:
+  # API Gateway REST API
+  SnapStudyAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: 'SnapStudy-Simple-CORS-Proxy'
+      Description: 'Simple HTTPS proxy with local OPTIONS handling'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # Proxy resource for all paths
+  ProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      ParentId: !GetAtt SnapStudyAPI.RootResourceId
+      PathPart: '{proxy+}'
+
+  # OPTIONS method - handled locally with MOCK
+  ProxyOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      ResourceId: !Ref ProxyResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Requested-With'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS,PATCH'"
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  # Root OPTIONS method
+  RootOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      ResourceId: !GetAtt SnapStudyAPI.RootResourceId
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Requested-With'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS,PATCH'"
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  # ANY method for proxy - forwards to backend
+  ProxyAnyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      ResourceId: !Ref ProxyResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.proxy: true
+      Integration:
+        Type: HTTP_PROXY
+        IntegrationHttpMethod: ANY
+        Uri: !Sub 'http://${BackendUrl}/{proxy}'
+        RequestParameters:
+          integration.request.path.proxy: 'method.request.path.proxy'
+
+  # Root ANY method
+  RootAnyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      ResourceId: !GetAtt SnapStudyAPI.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: HTTP_PROXY
+        IntegrationHttpMethod: ANY
+        Uri: !Sub 'http://${BackendUrl}/'
+
+  # Deployment
+  APIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ProxyOptionsMethod
+      - RootOptionsMethod
+      - ProxyAnyMethod
+      - RootAnyMethod
+    Properties:
+      RestApiId: !Ref SnapStudyAPI
+      StageName: !Ref StageName
+
+Outputs:
+  ApiGatewayUrl:
+    Description: 'API Gateway URL'
+    Value: !Sub 'https://${SnapStudyAPI}.execute-api.${AWS::Region}.amazonaws.com/${StageName}'
+  
+  ApiGatewayId:
+    Description: 'API Gateway ID'
+    Value: !Ref SnapStudyAPI

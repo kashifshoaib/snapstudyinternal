@@ -1,0 +1,22 @@
+{
+  "guestEnabled": true,
+  "guestUser": {
+    "id": "guest-user-001",
+    "email": "guest@snapstudy.com",
+    "password": "guest123",
+    "username": "Guest User",
+    "first_name": "Guest",
+    "last_name": "User",
+    "full_name": "Guest User",
+    "age": 25,
+    "profession": "Student",
+    "education_level": "Undergraduate",
+    "country": "United States",
+    "onboarding_completed": true,
+    "preferences": {
+      "learning_style": "visual",
+      "attention_span": 15,
+      "difficulty_level": "intermediate"
+    }
+  }
+}

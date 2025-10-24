@@ -1,0 +1,110 @@
+{
+  "dev": {
+    "stackName": "SnapStudy-Dev",
+    "environment": "dev",
+    "region": "us-east-1",
+    "tags": {
+      "Environment": "Development",
+      "Project": "SnapStudy",
+      "Owner": "Development Team"
+    },
+    "apiGateway": {
+      "throttling": {
+        "rateLimit": 100,
+        "burstLimit": 200
+      },
+      "cors": {
+        "allowOrigins": [
+          "http://localhost:3000",
+          "http://localhost:5173",
+          "http://127.0.0.1:3000"
+        ]
+      }
+    },
+    "cognito": {
+      "callbackUrls": [
+        "http://localhost:3000/auth/callback",
+        "http://localhost:5173/auth/callback"
+      ],
+      "logoutUrls": [
+        "http://localhost:3000/auth/logout",
+        "http://localhost:5173/auth/logout"
+      ]
+    },
+    "monitoring": {
+      "logRetentionDays": 7,
+      "enableDetailedMonitoring": false
+    }
+  },
+  "staging": {
+    "stackName": "SnapStudy-Staging",
+    "environment": "staging",
+    "region": "us-east-1",
+    "tags": {
+      "Environment": "Staging",
+      "Project": "SnapStudy",
+      "Owner": "Development Team"
+    },
+    "apiGateway": {
+      "throttling": {
+        "rateLimit": 500,
+        "burstLimit": 1000
+      },
+      "cors": {
+        "allowOrigins": [
+          "https://staging.snapstudy.com",
+          "https://staging-app.snapstudy.com"
+        ]
+      }
+    },
+    "cognito": {
+      "callbackUrls": [
+        "https://staging.snapstudy.com/auth/callback"
+      ],
+      "logoutUrls": [
+        "https://staging.snapstudy.com/auth/logout"
+      ]
+    },
+    "monitoring": {
+      "logRetentionDays": 14,
+      "enableDetailedMonitoring": true
+    }
+  },
+  "prod": {
+    "stackName": "SnapStudy-Production",
+    "environment": "prod",
+    "region": "us-east-1",
+    "tags": {
+      "Environment": "Production",
+      "Project": "SnapStudy",
+      "Owner": "Platform Team"
+    },
+    "apiGateway": {
+      "throttling": {
+        "rateLimit": 2000,
+        "burstLimit": 5000
+      },
+      "cors": {
+        "allowOrigins": [
+          "https://snapstudy.com",
+          "https://www.snapstudy.com",
+          "https://app.snapstudy.com"
+        ]
+      }
+    },
+    "cognito": {
+      "callbackUrls": [
+        "https://snapstudy.com/auth/callback",
+        "https://app.snapstudy.com/auth/callback"
+      ],
+      "logoutUrls": [
+        "https://snapstudy.com/auth/logout",
+        "https://app.snapstudy.com/auth/logout"
+      ]
+    },
+    "monitoring": {
+      "logRetentionDays": 90,
+      "enableDetailedMonitoring": true
+    }
+  }
+}

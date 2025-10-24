@@ -1,0 +1,272 @@
+/* Skeleton Loader Styles */
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skeleton-text-line {
+  margin-bottom: 0.25rem;
+}
+
+/* Skeleton Card */
+.skeleton-card {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.skeleton-card-image {
+  width: 100%;
+}
+
+.skeleton-card-content {
+  padding: 1rem;
+}
+
+.skeleton-card-title {
+  margin-bottom: 0.75rem;
+}
+
+.skeleton-card-text {
+  margin-bottom: 1rem;
+}
+
+.skeleton-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Skeleton List */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeleton-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.skeleton-list-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Skeleton Chart */
+.skeleton-chart {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  background: white;
+}
+
+.skeleton-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.skeleton-chart-content {
+  height: 200px;
+  display: flex;
+  align-items: end;
+}
+
+.skeleton-chart-bars {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+  width: 100%;
+  height: 100%;
+}
+
+.skeleton-chart-bar {
+  flex: 1;
+}
+
+/* Skeleton Quiz */
+.skeleton-quiz {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  background: white;
+}
+
+.skeleton-quiz-header {
+  margin-bottom: 1.5rem;
+}
+
+.skeleton-quiz-header > *:first-child {
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-quiz-question {
+  margin-bottom: 1.5rem;
+}
+
+.skeleton-quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.skeleton-quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.skeleton-quiz-actions {
+  display: flex;
+  justify-content: center;
+}
+
+/* Skeleton Lesson */
+.skeleton-lesson {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.skeleton-lesson-header {
+  margin-bottom: 1rem;
+}
+
+.skeleton-lesson-header > *:first-child {
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-lesson-meta {
+  display: flex;
+  gap: 1rem;
+}
+
+.skeleton-lesson-progress {
+  margin-bottom: 2rem;
+}
+
+.skeleton-lesson-content {
+  margin-bottom: 2rem;
+}
+
+.skeleton-lesson-content > * {
+  margin-bottom: 1.5rem;
+}
+
+.skeleton-lesson-media {
+  border-radius: 8px;
+}
+
+.skeleton-lesson-navigation {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Skeleton Dashboard */
+.skeleton-dashboard {
+  padding: 1.5rem;
+}
+
+.skeleton-dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.skeleton-dashboard-header > *:first-child {
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.skeleton-dashboard-stat {
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  text-align: center;
+  background: white;
+}
+
+.skeleton-dashboard-stat > *:first-child {
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-dashboard-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .skeleton-card-actions {
+    flex-direction: column;
+  }
+  
+  .skeleton-lesson-navigation {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .skeleton-dashboard-charts {
+    grid-template-columns: 1fr;
+  }
+  
+  .skeleton-chart-bars {
+    gap: 0.25rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .skeleton {
+    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  }
+  
+  .skeleton-card,
+  .skeleton-chart,
+  .skeleton-quiz,
+  .skeleton-dashboard-stat {
+    background: #1a1a1a;
+    border-color: #404040;
+  }
+  
+  .skeleton-list-item,
+  .skeleton-quiz-option {
+    border-color: #404040;
+  }
+}

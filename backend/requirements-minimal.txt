@@ -1,0 +1,10 @@
+# Minimal requirements for basic functionality
+fastapi==0.104.1
+uvicorn==0.24.0
+a2wsgi==1.8.1
+pydantic==2.5.0
+python-dotenv==1.0.0
+boto3==1.34.44
+PyJWT==2.8.0
+python-multipart==0.0.6
+requests==2.31.0
