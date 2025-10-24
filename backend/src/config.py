@@ -44,8 +44,8 @@ class Settings:
     bedrock_region: str = os.getenv("BEDROCK_REGION", "us-east-1")
 
     # Bedrock Agents Configuration (AgentCore)
-    learning_agent_id: str = os.getenv("LEARNING_AGENT_ID", "YSEVVJCGLP")
-    adaptive_agent_id: str = os.getenv("ADAPTIVE_AGENT_ID", "F2UEM1NWFF")
+    learning_agent_id: str = os.getenv("LEARNING_AGENT_ID", "HB13KZSQ4U")
+    adaptive_agent_id: str = os.getenv("ADAPTIVE_AGENT_ID", "AWQSAIHQZF")
     bedrock_agent_alias_id: str = os.getenv("BEDROCK_AGENT_ALIAS_ID", "TSTALIASID")
 
     # Knowledge Base Configuration

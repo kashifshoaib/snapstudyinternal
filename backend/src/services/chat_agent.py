@@ -469,10 +469,29 @@ I adapt to your learning style and provide personalized help. Just ask me anythi
         intent_analysis: Dict[str, Any], 
         context: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Handle general conversational responses."""
+        """Handle general conversational responses using agent reasoning."""
         user_message = context.get('user_message', '')
         current_lesson = context.get('current_lesson', {})
         conversation_history = context.get('conversation_history', [])
+        
+        # Extract agent's reasoning and insights
+        agent_reasoning = intent_analysis.get('reasoning', '')
+        agent_insights = intent_analysis.get('insights', '')
+        suggested_response = intent_analysis.get('suggested_response', '')
+        direct_response = intent_analysis.get('response', '')  # Direct response from agent
+        
+        # If agent provided a direct response, use it (especially for fallback cases)
+        if direct_response and len(direct_response.strip()) > 10:
+            logger.info(f"🎯 Using direct agent response: {direct_response[:100]}...")
+            return {
+                'response': direct_response.strip(),
+                'response_type': 'chat',
+                'metadata': {
+                    'source': 'agent_direct',
+                    'agent_reasoning': agent_reasoning,
+                    'conversation_type': 'contextual'
+                }
+            }
         
         # Build conversation context from recent history
         history_context = ""
@@ -489,7 +508,7 @@ I adapt to your learning style and provide personalized help. Just ask me anythi
         import time
         timestamp = int(time.time() * 1000)
         
-        # Generate contextual response using Bedrock
+        # Generate contextual response using Bedrock with agent insights
         chat_prompt = f"""
         You are an AI tutor having a natural conversation with a student. 
         
@@ -498,23 +517,34 @@ I adapt to your learning style and provide personalized help. Just ask me anythi
         
         Current student message: {user_message}
         
+        Agent Analysis:
+        - Reasoning: {agent_reasoning}
+        - Insights: {agent_insights}
+        - Suggested Response: {suggested_response}
+        
         Current lesson context: {current_lesson.get('title', 'No active lesson')}
         
-        Provide a helpful, encouraging response that:
-        1. Acknowledges their current message naturally
-        2. Considers the conversation flow and avoids repetition
-        3. Relates to their learning context when appropriate
-        4. Offers gentle guidance toward learning activities
-        5. Maintains a supportive, friendly tone
-        6. Provides a fresh, contextual response (not generic)
-        7. Make each response unique and varied
+        Based on the agent's analysis, provide a helpful, encouraging response that:
+        1. Incorporates the agent's insights and reasoning
+        2. Directly addresses the student's specific question or need
+        3. Considers the conversation flow and avoids repetition
+        4. Relates to their learning context when appropriate
+        5. Offers specific, actionable guidance
+        6. Maintains a supportive, friendly tone
+        7. Provides a contextual response based on the agent's understanding
         
-        Keep the response conversational and under 100 words.
+        Keep the response conversational and under 150 words.
         
         [Request ID: {timestamp}]
         """
         
         try:
+            # Log agent analysis for debugging
+            logger.info(f"🧠 Agent Analysis - Intent: {intent_analysis.get('intent')}, "
+                       f"Confidence: {intent_analysis.get('confidence')}, "
+                       f"Direct Response Length: {len(direct_response)}, "
+                       f"Reasoning: {agent_reasoning[:100] if agent_reasoning else 'None'}")
+            
             logger.info(f"🤖 Calling Bedrock for general chat response...")
             # Use higher temperature for more varied responses
             response = await self.bedrock.invoke_claude(

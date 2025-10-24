@@ -314,6 +314,7 @@ class BedrockAgentCore:
             processed_response = {
                 'goal': goal,
                 'agent_response': response_text,
+                'response': response_text,  # Include full response for direct use
                 'autonomous_decision': True,
                 'confidence': self._extract_confidence_from_response(response_text),
                 'reasoning': self._extract_reasoning_from_response(response_text),
@@ -349,11 +350,10 @@ class BedrockAgentCore:
     def _extract_reasoning_from_response(self, response_text: str) -> str:
         """Extract reasoning from agent response."""
         try:
-            # Try to find reasoning section
-            import re
-            reasoning_match = re.search(r'reasoning["\s:]*["\']([^"\']+)["\']', response_text.lower())
-            if reasoning_match:
-                return reasoning_match.group(1)
+            # For now, return the full response as reasoning since agents provide complete answers
+            # In production, you might parse structured responses differently
+            if response_text and len(response_text.strip()) > 10:
+                return response_text.strip()
             return "Agent provided autonomous reasoning"
         except:
             return "Agent reasoning available"
