@@ -1,11 +1,10 @@
-# AWS SDK
-boto3==1.34.44
-botocore==1.34.44
+# AWS SDK (Updated for Bedrock Agents, Knowledge Bases, Guardrails)
+boto3>=1.34.44
+botocore>=1.34.44
 
 # Web framework for container deployment
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-a2wsgi==1.10.10
 
 # Authentication and security
 PyJWT==2.8.0
@@ -20,6 +19,13 @@ python-dotenv==1.0.0
 
 # Security and validation
 email-validator==2.1.0
+bleach==6.1.0
+psutil==5.9.6
 
-# HTTP client
+# HTTP client for monitoring scripts
+aiohttp==3.9.1
 requests==2.31.0
+
+# Testing (development only)
+pytest==7.4.3
+pytest-asyncio==0.21.1

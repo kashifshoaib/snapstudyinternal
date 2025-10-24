@@ -29,8 +29,8 @@ class BedrockRequestCoordinator:
         # Track last request time for spacing
         self._last_request_time = 0.0
         
-        # Minimum delay between ANY Bedrock requests (very aggressive spacing)
-        self._min_request_interval = 6.0  # 6 seconds between requests (very aggressive)
+        # Minimum delay between ANY Bedrock requests (adjusted for Haiku)
+        self._min_request_interval = 2.0  # 2 seconds between requests (reasonable for Haiku)
         
         # Track request statistics
         self._stats = {

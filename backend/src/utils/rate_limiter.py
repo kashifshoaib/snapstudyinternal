@@ -72,9 +72,9 @@ class BedrockRateLimiter:
         ))
         
         self.model_limiter = TokenBucket(RateLimitConfig(
-            requests_per_minute=60,  # Conservative for direct model calls
-            burst_capacity=8,
-            refill_rate=1.0
+            requests_per_minute=30,  # Conservative for Haiku (lower quota than Sonnet)
+            burst_capacity=5,
+            refill_rate=0.5
         ))
     
     async def acquire_agent_token(self) -> None:

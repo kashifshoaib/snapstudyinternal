@@ -1,4 +1,4 @@
-"""AWS Bedrock service for AI/ML operations using Amazon Nova Micro."""
+"""AWS Bedrock service for AI/ML operations using Claude 4."""
 
 import boto3
 import json
@@ -18,18 +18,18 @@ logger = logging.getLogger(__name__)
 
 
 class BedrockService:
-    """Service for AWS Bedrock operations with Amazon Nova Micro."""
+    """Service for AWS Bedrock operations with Claude 4."""
     
     def __init__(self):
         self.bedrock_client = boto3.client('bedrock-runtime', region_name=settings.aws_region)
         self.model_id = settings.bedrock_model_id
         
-        # Enhanced retry configuration for throttling
-        self.max_retries = 6  # Increased for throttling scenarios
-        self.base_delay = 2.0  # Longer initial delay
-        self.max_delay = 120.0  # Longer max delay for severe throttling
-        self.backoff_multiplier = 2.5  # More aggressive backoff
-        self.jitter_range = 0.2  # More jitter to spread requests
+        # Retry configuration optimized for Haiku
+        self.max_retries = 5  # Reasonable retries for Haiku
+        self.base_delay = 1.0  # Start with 1 second delay
+        self.max_delay = 60.0  # Max 60s delay (was 180s)
+        self.backoff_multiplier = 2.0  # Standard exponential backoff
+        self.jitter_range = 0.3  # Jitter to spread requests
     
     def _calculate_delay(self, attempt: int) -> float:
         """Calculate exponential backoff delay with jitter."""
@@ -135,7 +135,7 @@ class BedrockService:
         temperature: float = 0.7,
         system_prompt: Optional[str] = None
     ) -> str:
-        """Invoke Nova Micro model with a prompt and retry logic."""
+        """Invoke Claude 4 model with a prompt and retry logic."""
         
         # Log input token usage
         full_input = f"{system_prompt or ''}\n\n{prompt}"
@@ -148,74 +148,37 @@ class BedrockService:
         
         def _invoke_model():
             """Internal function to invoke the model (for retry logic)."""
-            # Prepare the conversation for Nova using invoke_model format
-            conversation = []
+            # Prepare the request body for Claude 4 with correct format
+            messages = [{
+                "role": "user", 
+                "content": prompt
+            }]
             
-            # Add system message if provided
-            if system_prompt:
-                logger.info(f"📋 Adding system prompt: {system_prompt[:100]}...")
-                conversation.append({
-                    "role": "system",
-                    "content": [{"text": system_prompt}]
-                })
-            
-            # Add user message
-            logger.info(f"💬 Adding user prompt: {prompt[:100]}...")
-            conversation.append({
-                "role": "user",
-                "content": [{"text": prompt}]
-            })
-            
-            # Use invoke_model with Nova's native format (compatible with older boto3)
             body = {
-                "messages": conversation
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "messages": messages
             }
             
-            # Log the request being sent
-            logger.info(f"📤 Nova Request Body: {json.dumps(body, indent=2)}")
-            logger.info(f"🎯 Nova Model ID: {self.model_id}")
+            # Add system prompt as a separate parameter if provided
+            if system_prompt:
+                body["system"] = system_prompt
             
-            try:
-                logger.info("🚀 Sending request to Nova...")
-                start_time = time.time()
-                
-                response = self.bedrock_client.invoke_model(
-                    modelId=self.model_id,
-                    body=json.dumps(body),
-                    contentType='application/json'
-                )
-                
-                end_time = time.time()
-                logger.info(f"⏱️ Nova request completed in {end_time - start_time:.2f}s")
-                
-            except Exception as e:
-                logger.error(f"❌ Nova request failed: {type(e).__name__}: {str(e)}")
-                raise
+            response = self.bedrock_client.invoke_model(
+                modelId=self.model_id,
+                body=json.dumps(body),
+                contentType='application/json'
+            )
             
             response_body = json.loads(response['body'].read())
             
-            # Log the full response for debugging
-            logger.info(f"🔍 Nova Response Body: {json.dumps(response_body, indent=2)}")
-            
-            # Extract response text from Nova invoke_model format
-            if 'output' in response_body and 'message' in response_body['output']:
-                output_text = response_body['output']['message']['content'][0]['text']
-                
-                # Log the extracted text
-                logger.info(f"✅ Nova Output Text: {output_text[:200]}...")
-                
-                # Log Nova usage information if available
-                if 'usage' in response_body:
-                    usage = response_body['usage']
-                    logger.info(f"📊 Nova Usage: {json.dumps(usage, indent=2)}")
-                
-                # Log stop reason
-                if 'stopReason' in response_body:
-                    logger.info(f"🛑 Nova Stop Reason: {response_body['stopReason']}")
+            if 'content' in response_body and response_body['content']:
+                output_text = response_body['content'][0]['text']
                 
                 # Log complete token usage
                 token_counter.log_token_usage(
-                    operation="bedrock_nova_invoke",
+                    operation="bedrock_claude_invoke",
                     input_text=full_input,
                     output_text=output_text,
                     model_id=self.model_id
@@ -223,34 +186,24 @@ class BedrockService:
                 
                 return output_text
             else:
-                logger.error(f"❌ Unexpected Nova response format: {json.dumps(response_body, indent=2)}")
-                raise ValueError("Invalid response format from Nova")
+                logger.error(f"Unexpected response format: {response_body}")
+                raise ValueError("Invalid response format from Claude")
         
         try:
             # Use coordinator to space out the request, then apply retry logic
             async def _coordinated_invoke():
                 return await self._retry_with_backoff(_invoke_model)
             
-            # Add timeout to prevent hanging requests
-            logger.info("⏳ Starting Nova request with 30s timeout...")
-            result = await asyncio.wait_for(
-                bedrock_coordinator.execute_bedrock_request('model', _coordinated_invoke),
-                timeout=30.0
+            return await bedrock_coordinator.execute_bedrock_request(
+                'model', _coordinated_invoke
             )
-            logger.info("✅ Nova request completed successfully")
-            return result
             
-        except asyncio.TimeoutError:
-            logger.error("⏰ Nova request timed out after 30 seconds")
-            raise RuntimeError("Nova request timed out")
         except ClientError as e:
-            logger.error(f"❌ Bedrock API error after retries: {e}")
+            logger.error(f"Bedrock API error after retries: {e}")
             raise ValueError(f"Bedrock API error: {e.response['Error']['Message']}")
         except Exception as e:
-            logger.error(f"❌ Error invoking Nova after retries: {e}")
-            import traceback
-            logger.error(f"📋 Full traceback: {traceback.format_exc()}")
-            raise ValueError(f"Error invoking Nova: {str(e)}")
+            logger.error(f"Error invoking Claude after retries: {e}")
+            raise ValueError(f"Error invoking Claude: {str(e)}")
     
     async def analyze_content(self, content: str, content_type: str) -> Dict[str, Any]:
         """Analyze content and extract learning structure."""

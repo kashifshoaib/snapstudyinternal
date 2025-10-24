@@ -491,12 +491,14 @@ I adapt to your learning style and provide personalized help. Just ask me anythi
         """
         
         try:
+            logger.info(f"🤖 Calling Bedrock for general chat response...")
             response = await self.bedrock.invoke_claude(
                 prompt=chat_prompt,
                 max_tokens=4096,
                 temperature=0.7
             )
-            
+
+            logger.info(f"✅ Bedrock response received: {response[:100]}...")
             return {
                 'response': response.strip(),
                 'response_type': 'chat',
@@ -504,12 +506,17 @@ I adapt to your learning style and provide personalized help. Just ask me anythi
                     'conversation_type': 'general'
                 }
             }
-            
+
         except Exception as e:
-            logger.error(f"General chat response failed: {e}")
+            logger.error(f"❌ General chat response failed with error: {type(e).__name__}: {e}")
+            logger.error(f"Error details: {str(e)}")
             return {
                 'response': "I'm here to help with your learning! Is there anything specific you'd like to know or work on?",
-                'response_type': 'chat'
+                'response_type': 'chat',
+                'metadata': {
+                    'error': str(e),
+                    'error_type': type(e).__name__
+                }
             }
     
     async def _extract_concept_from_message(self, message: str) -> str:

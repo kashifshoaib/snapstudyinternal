@@ -60,16 +60,19 @@ class BedrockAgentCore:
     def __init__(self):
         self.bedrock_agent_client = boto3.client('bedrock-agent-runtime', region_name=settings.aws_region)
         self.bedrock_client = boto3.client('bedrock-runtime', region_name=settings.aws_region)
-        
+
         # Agent configuration - these will be set from infrastructure outputs
         self.learning_agent_id = getattr(settings, 'learning_agent_id', None)
         self.adaptive_agent_id = getattr(settings, 'adaptive_agent_id', None)
         self.agent_alias_id = getattr(settings, 'bedrock_agent_alias_id', 'PRODUCTION')
         self.knowledge_base_id = getattr(settings, 'knowledge_base_id', None)
-        
+
         # Session management for agent conversations
         self.active_sessions = {}
-        
+
+        # Initialize memory store for agent memory functionality
+        self.memory_store = {}
+
         logger.info(f"BedrockAgentCore initialized with Learning Agent: {self.learning_agent_id}, Adaptive Agent: {self.adaptive_agent_id}")
         
     async def reason_over_context(self, context: Dict[str, Any], goal: str) -> Dict[str, Any]:
@@ -235,7 +238,7 @@ class BedrockAgentCore:
             event_stream = response['completion']
             agent_response = ""
             trace_data = []
-            
+
             for event in event_stream:
                 if 'chunk' in event:
                     chunk = event['chunk']
@@ -243,7 +246,7 @@ class BedrockAgentCore:
                         agent_response += chunk['bytes'].decode('utf-8')
                 elif 'trace' in event:
                     trace_data.append(event['trace'])
-            
+
             return {
                 'response': agent_response,
                 'trace': trace_data,
@@ -251,24 +254,17 @@ class BedrockAgentCore:
                 'autonomous_decision': True,
                 'agent_used': True
             }
-            
+
         except Exception as e:
-            error_msg = str(e)
-            if 'throttlingException' in error_msg.lower() or 'rate' in error_msg.lower():
-                logger.warning(f"Agent throttled, will retry: {e}")
-                return {
-                    'response': "Agent temporarily throttled",
-                    'error': str(e),
-                    'throttled': True,
-                    'autonomous_decision': False
-                }
+            error_msg = str(e).lower()
+            # For throttling errors, re-raise so the coordinator can handle retries properly
+            if 'throttl' in error_msg or 'rate' in error_msg or 'too many' in error_msg:
+                logger.warning(f"⚠️ Agent stream processing detected throttling, re-raising for retry: {e}")
+                raise  # Re-raise to let the coordinator handle the retry
             else:
-                logger.error(f"Error processing agent stream: {e}")
-                return {
-                    'response': "Agent processing error",
-                    'error': str(e),
-                    'autonomous_decision': False
-                }
+                # For other errors, log and re-raise
+                logger.error(f"❌ Error processing agent stream: {e}")
+                raise  # Re-raise instead of returning error response
     
     def _prepare_agent_context(self, context: Dict[str, Any], goal: str) -> str:
         """
@@ -373,35 +369,37 @@ class BedrockAgentCore:
     async def _agent_fallback_reasoning(self, context: Dict[str, Any], goal: str, error: str) -> Dict[str, Any]:
         """
         Enhanced fallback using Bedrock Claude for local development.
-        
+
         Uses Claude directly for intelligent reasoning when Bedrock Agents aren't available.
         This provides good functionality for development and testing.
         """
         logger.info(f"Using Bedrock Claude fallback for: {goal}")
-        
+
         try:
             # Use Bedrock Claude for intelligent reasoning
             prompt = self._create_reasoning_prompt(context, goal)
-            
+
             response = await bedrock_service.invoke_claude(
                 prompt=prompt,
                 max_tokens=4096,
-                temperature=0.3
+                temperature=0.7
             )
-            
+
             # Parse Claude's response
             try:
                 parsed_response = json.loads(response)
+                logger.info(f"✅ Claude returned valid JSON response")
             except json.JSONDecodeError:
-                # If Claude doesn't return JSON, create a structured response
+                # If Claude doesn't return JSON, use the natural language response directly
+                logger.info(f"Claude returned natural language response, using directly")
                 parsed_response = {
                     'intent': 'general_chat',
-                    'confidence': 0.7,
-                    'response': response,
+                    'confidence': 0.8,
+                    'response': response.strip(),  # Use actual Claude response, not hardcoded
                     'reasoning': 'Claude provided natural language response'
                 }
-            
-            logger.info(f"Claude fallback reasoning completed for: {goal}")
+
+            logger.info(f"✅ Claude fallback reasoning completed for: {goal}")
             return {
                 'goal': goal,
                 'autonomous_decision': True,  # Claude is still intelligent
@@ -410,32 +408,23 @@ class BedrockAgentCore:
                 **parsed_response,
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as claude_error:
-            logger.warning(f"Claude fallback failed: {claude_error}, using simple rules")
-            
-            # Final fallback to simple rules
-            performance = context.get('performance_data', {})
-            avg_score = performance.get('average_score', 0.7)
-            
-            if avg_score >= 0.85:
-                decision = 'advance'
-                confidence = 0.6
-            elif avg_score < 0.6:
-                decision = 'simplify'
-                confidence = 0.6
-            else:
-                decision = 'continue'
-                confidence = 0.5
-            
+            logger.error(f"❌ Claude fallback failed: {claude_error}")
+
+            # Final fallback - return a helpful error message instead of pretending to work
+            user_message = context.get('user_message', '')
+
             return {
                 'goal': goal,
                 'autonomous_decision': False,
                 'fallback_used': True,
-                'method': 'simple_rules',
-                'decision': decision,
-                'reasoning': f'Rule-based decision (score: {avg_score})',
-                'confidence': confidence,
+                'method': 'error_fallback',
+                'intent': 'general_chat',
+                'confidence': 0.3,
+                'response': f"I apologize, but I'm having trouble processing your message right now. The AI service is temporarily unavailable. Please try again in a moment.",
+                'reasoning': f'All reasoning methods failed: {str(claude_error)}',
+                'error': str(claude_error),
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }
     

@@ -8,7 +8,7 @@ import logging
 
 from ...utils.rate_limiter import bedrock_rate_limiter
 from ...utils.circuit_breaker import bedrock_circuit_breakers
-from ...utils.request_queue import get_bedrock_request_queue
+from ...utils.request_queue import bedrock_request_queue
 from ...utils.bedrock_coordinator import bedrock_coordinator
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ async def bedrock_health() -> Dict[str, Any]:
         circuit_status = bedrock_circuit_breakers.get_status()
         
         # Get queue statistics
-        queue_stats = get_bedrock_request_queue().get_stats()
+        queue_stats = bedrock_request_queue.get_stats()
         
         # Determine overall health
         agent_healthy = circuit_status['agent_breaker']['state'] != 'open'
@@ -137,7 +137,7 @@ async def throttling_status() -> Dict[str, Any]:
             }
         },
         "circuit_breakers": bedrock_circuit_breakers.get_status(),
-        "request_queue": get_bedrock_request_queue().get_stats()
+        "request_queue": bedrock_request_queue.get_stats()
     }
 
 

@@ -56,20 +56,12 @@ class BedrockRequestQueue:
             'total_wait_time': 0.0
         }
         
-        self.agent_processor_task = None
-        self.model_processor_task = None
-        self._processors_started = False
+        self._start_processors()
     
     def _start_processors(self):
         """Start background processors for queues."""
-        if not self._processors_started:
-            try:
-                self.agent_processor_task = asyncio.create_task(self._process_agent_queue())
-                self.model_processor_task = asyncio.create_task(self._process_model_queue())
-                self._processors_started = True
-            except RuntimeError:
-                # No event loop running, processors will be started when first request is made
-                pass
+        self.agent_processor_task = asyncio.create_task(self._process_agent_queue())
+        self.model_processor_task = asyncio.create_task(self._process_model_queue())
     
     async def queue_agent_request(
         self, 
@@ -79,10 +71,6 @@ class BedrockRequestQueue:
         **kwargs
     ) -> Any:
         """Queue a Bedrock Agent request."""
-        # Ensure processors are started
-        if not self._processors_started:
-            self._start_processors()
-            
         request_id = f"agent_{datetime.now().timestamp()}"
         request = QueuedRequest(request_id, func, args, kwargs, priority)
         
@@ -107,10 +95,6 @@ class BedrockRequestQueue:
         **kwargs
     ) -> Any:
         """Queue a Bedrock Model request."""
-        # Ensure processors are started
-        if not self._processors_started:
-            self._start_processors()
-            
         request_id = f"model_{datetime.now().timestamp()}"
         request = QueuedRequest(request_id, func, args, kwargs, priority)
         
@@ -251,15 +235,8 @@ class BedrockRequestQueue:
             self.model_processor_task.cancel()
 
 
-# Global request queue instance - lazy initialization
-bedrock_request_queue = None
-
-def get_bedrock_request_queue():
-    """Get or create the global bedrock request queue."""
-    global bedrock_request_queue
-    if bedrock_request_queue is None:
-        bedrock_request_queue = BedrockRequestQueue(
-            max_concurrent=2,      # Conservative concurrency
-            processing_delay=0.8   # 800ms delay between requests
-        )
-    return bedrock_request_queue
+# Global request queue instance
+bedrock_request_queue = BedrockRequestQueue(
+    max_concurrent=2,      # Conservative concurrency
+    processing_delay=0.8   # 800ms delay between requests
+)

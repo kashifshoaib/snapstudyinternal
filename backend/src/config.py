@@ -40,12 +40,12 @@ class Settings:
     cors_origins: List[str] = os.getenv("CORS_ORIGINS", "*").split(",")
     
     # Bedrock Configuration
-    bedrock_model_id: str = os.getenv("BEDROCK_MODEL_ID", "amazon.nova-micro-v1:0")
+    bedrock_model_id: str = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
     bedrock_region: str = os.getenv("BEDROCK_REGION", "us-east-1")
 
     # Bedrock Agents Configuration (AgentCore)
-    learning_agent_id: str = os.getenv("LEARNING_AGENT_ID", "YSEVVJCGLP")
-    adaptive_agent_id: str = os.getenv("ADAPTIVE_AGENT_ID", "F2UEM1NWFF")
+    learning_agent_id: str = os.getenv("LEARNING_AGENT_ID", "")
+    adaptive_agent_id: str = os.getenv("ADAPTIVE_AGENT_ID", "")
     bedrock_agent_alias_id: str = os.getenv("BEDROCK_AGENT_ALIAS_ID", "TSTALIASID")
 
     # Knowledge Base Configuration
