@@ -157,7 +157,12 @@ class PerformanceMonitor:
         
         # Send metrics if buffer is full
         if len(self.metrics_buffer) >= self.buffer_size:
-            asyncio.create_task(self._flush_metrics())
+            try:
+                asyncio.create_task(self._flush_metrics())
+            except RuntimeError:
+                # No event loop available, flush synchronously
+                logger.warning("No event loop available, skipping metric flush")
+                pass
     
     async def _flush_metrics(self):
         """Send buffered metrics to CloudWatch."""

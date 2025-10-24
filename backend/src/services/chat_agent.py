@@ -472,30 +472,55 @@ I adapt to your learning style and provide personalized help. Just ask me anythi
         """Handle general conversational responses."""
         user_message = context.get('user_message', '')
         current_lesson = context.get('current_lesson', {})
+        conversation_history = context.get('conversation_history', [])
+        
+        # Build conversation context from recent history
+        history_context = ""
+        if conversation_history:
+            recent_messages = conversation_history[-4:]  # Last 4 messages for context
+            history_lines = []
+            for msg in recent_messages:
+                role = "Student" if msg.get('role') == 'user' else "Tutor"
+                content = msg.get('content', '')[:100]  # Limit length
+                history_lines.append(f"{role}: {content}")
+            history_context = "\n".join(history_lines)
+        
+        # Add timestamp to ensure unique prompts
+        import time
+        timestamp = int(time.time() * 1000)
         
         # Generate contextual response using Bedrock
         chat_prompt = f"""
         You are an AI tutor having a natural conversation with a student. 
         
-        Student message: {user_message}
+        Recent conversation:
+        {history_context}
+        
+        Current student message: {user_message}
         
         Current lesson context: {current_lesson.get('title', 'No active lesson')}
         
         Provide a helpful, encouraging response that:
-        1. Acknowledges their message naturally
-        2. Relates to their learning context when appropriate
-        3. Offers gentle guidance toward learning activities
-        4. Maintains a supportive, friendly tone
+        1. Acknowledges their current message naturally
+        2. Considers the conversation flow and avoids repetition
+        3. Relates to their learning context when appropriate
+        4. Offers gentle guidance toward learning activities
+        5. Maintains a supportive, friendly tone
+        6. Provides a fresh, contextual response (not generic)
+        7. Make each response unique and varied
         
         Keep the response conversational and under 100 words.
+        
+        [Request ID: {timestamp}]
         """
         
         try:
             logger.info(f"🤖 Calling Bedrock for general chat response...")
+            # Use higher temperature for more varied responses
             response = await self.bedrock.invoke_claude(
                 prompt=chat_prompt,
-                max_tokens=4096,
-                temperature=0.7
+                max_tokens=200,  # Shorter responses for chat
+                temperature=0.8  # Higher temperature for more creativity
             )
 
             logger.info(f"✅ Bedrock response received: {response[:100]}...")

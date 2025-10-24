@@ -440,9 +440,14 @@ def initialize_performance_monitoring():
     logger.info("Initializing performance monitoring system...")
     
     # Start cache cleanup task
-    asyncio.create_task(cache_cleanup_task())
-    
-    logger.info("Performance monitoring system initialized")
+    try:
+        asyncio.create_task(cache_cleanup_task())
+        logger.info("Performance monitoring system initialized")
+    except RuntimeError as e:
+        if "no running event loop" in str(e):
+            logger.warning("No event loop available, performance monitoring will initialize on first use")
+        else:
+            raise
 
 
 # Export optimized functions for use in authentication flows

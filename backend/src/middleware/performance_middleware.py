@@ -136,7 +136,10 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             return
         
         # Don't cache responses with authentication or user-specific data
-        if "authorization" in request.headers or "user" in str(request.url.path).lower():
+        if ("authorization" in request.headers or 
+            "user" in str(request.url.path).lower() or
+            "chat" in str(request.url.path).lower() or
+            "message" in str(request.url.path).lower()):
             return
         
         cache_key = self._generate_cache_key(request)
@@ -162,8 +165,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         # Determine cache strategy based on endpoint
         path = request.url.path
         
-        if "/auth/" in path:
-            # Don't cache auth endpoints
+        if "/auth/" in path or "/chat/" in path:
+            # Don't cache auth or chat endpoints
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"

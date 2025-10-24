@@ -40,12 +40,12 @@ class Settings:
     cors_origins: List[str] = os.getenv("CORS_ORIGINS", "*").split(",")
     
     # Bedrock Configuration
-    bedrock_model_id: str = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
+    bedrock_model_id: str = os.getenv("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0")
     bedrock_region: str = os.getenv("BEDROCK_REGION", "us-east-1")
 
     # Bedrock Agents Configuration (AgentCore)
-    learning_agent_id: str = os.getenv("LEARNING_AGENT_ID", "")
-    adaptive_agent_id: str = os.getenv("ADAPTIVE_AGENT_ID", "")
+    learning_agent_id: str = os.getenv("LEARNING_AGENT_ID", "YSEVVJCGLP")
+    adaptive_agent_id: str = os.getenv("ADAPTIVE_AGENT_ID", "F2UEM1NWFF")
     bedrock_agent_alias_id: str = os.getenv("BEDROCK_AGENT_ALIAS_ID", "TSTALIASID")
 
     # Knowledge Base Configuration
@@ -59,14 +59,14 @@ class Settings:
     # Environment
     environment: str = os.getenv("ENVIRONMENT", "development")
     
-    # Throttling and Rate Limiting Configuration
-    bedrock_max_requests_per_minute: int = int(os.getenv("BEDROCK_MAX_RPM", "80"))
-    bedrock_burst_capacity: int = int(os.getenv("BEDROCK_BURST_CAPACITY", "10"))
-    bedrock_agent_max_rpm: int = int(os.getenv("BEDROCK_AGENT_MAX_RPM", "40"))
-    bedrock_model_max_rpm: int = int(os.getenv("BEDROCK_MODEL_MAX_RPM", "60"))
+    # Throttling and Rate Limiting Configuration (Nova Lite optimized)
+    bedrock_max_requests_per_minute: int = int(os.getenv("BEDROCK_MAX_RPM", "120"))
+    bedrock_burst_capacity: int = int(os.getenv("BEDROCK_BURST_CAPACITY", "15"))
+    bedrock_agent_max_rpm: int = int(os.getenv("BEDROCK_AGENT_MAX_RPM", "60"))
+    bedrock_model_max_rpm: int = int(os.getenv("BEDROCK_MODEL_MAX_RPM", "100"))
     
-    # Request Queue Configuration
-    max_concurrent_requests: int = int(os.getenv("MAX_CONCURRENT_REQUESTS", "2"))
-    request_processing_delay: float = float(os.getenv("REQUEST_PROCESSING_DELAY", "0.8"))
+    # Request Queue Configuration (Nova Lite optimized)
+    max_concurrent_requests: int = int(os.getenv("MAX_CONCURRENT_REQUESTS", "4"))
+    request_processing_delay: float = float(os.getenv("REQUEST_PROCESSING_DELAY", "0.3"))
 
 settings = Settings()

@@ -36,8 +36,8 @@ class BedrockRequestQueue:
         self.processing_delay = processing_delay  # Delay between requests
         
         # Separate queues for different request types
-        self.agent_queue = asyncio.PriorityQueue()
-        self.model_queue = asyncio.PriorityQueue()
+        self.agent_queue = None
+        self.model_queue = None
         
         # Track active requests
         self.active_agent_requests = 0
@@ -47,6 +47,9 @@ class BedrockRequestQueue:
         self.agent_processor_task = None
         self.model_processor_task = None
         
+        # Initialization flag
+        self._initialized = False
+        
         # Statistics
         self.stats = {
             'agent_requests_processed': 0,
@@ -55,13 +58,26 @@ class BedrockRequestQueue:
             'model_queue_size': 0,
             'total_wait_time': 0.0
         }
-        
-        self._start_processors()
     
-    def _start_processors(self):
-        """Start background processors for queues."""
-        self.agent_processor_task = asyncio.create_task(self._process_agent_queue())
-        self.model_processor_task = asyncio.create_task(self._process_model_queue())
+    def _ensure_initialized(self):
+        """Ensure queues and processors are initialized."""
+        if not self._initialized:
+            try:
+                # Initialize queues
+                self.agent_queue = asyncio.PriorityQueue()
+                self.model_queue = asyncio.PriorityQueue()
+                
+                # Start processors
+                self.agent_processor_task = asyncio.create_task(self._process_agent_queue())
+                self.model_processor_task = asyncio.create_task(self._process_model_queue())
+                
+                self._initialized = True
+                logger.info("BedrockRequestQueue initialized successfully")
+            except RuntimeError as e:
+                if "no running event loop" in str(e):
+                    logger.warning("No event loop available, queue will initialize on first use")
+                else:
+                    raise
     
     async def queue_agent_request(
         self, 
@@ -71,6 +87,8 @@ class BedrockRequestQueue:
         **kwargs
     ) -> Any:
         """Queue a Bedrock Agent request."""
+        self._ensure_initialized()
+        
         request_id = f"agent_{datetime.now().timestamp()}"
         request = QueuedRequest(request_id, func, args, kwargs, priority)
         
@@ -95,6 +113,8 @@ class BedrockRequestQueue:
         **kwargs
     ) -> Any:
         """Queue a Bedrock Model request."""
+        self._ensure_initialized()
+        
         request_id = f"model_{datetime.now().timestamp()}"
         request = QueuedRequest(request_id, func, args, kwargs, priority)
         
@@ -219,12 +239,16 @@ class BedrockRequestQueue:
     
     def get_stats(self) -> Dict[str, Any]:
         """Get queue statistics."""
+        agent_queue_size = self.agent_queue.qsize() if self.agent_queue else 0
+        model_queue_size = self.model_queue.qsize() if self.model_queue else 0
+        
         return {
             **self.stats,
             'active_agent_requests': self.active_agent_requests,
             'active_model_requests': self.active_model_requests,
-            'agent_queue_size': self.agent_queue.qsize(),
-            'model_queue_size': self.model_queue.qsize()
+            'agent_queue_size': agent_queue_size,
+            'model_queue_size': model_queue_size,
+            'initialized': self._initialized
         }
     
     async def shutdown(self):
@@ -237,6 +261,6 @@ class BedrockRequestQueue:
 
 # Global request queue instance
 bedrock_request_queue = BedrockRequestQueue(
-    max_concurrent=2,      # Conservative concurrency
-    processing_delay=0.8   # 800ms delay between requests
+    max_concurrent=4,      # Higher concurrency for Nova Lite
+    processing_delay=0.3   # 300ms delay between requests
 )

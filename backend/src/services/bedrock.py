@@ -1,4 +1,4 @@
-"""AWS Bedrock service for AI/ML operations using Claude 4."""
+"""AWS Bedrock service for AI/ML operations using Amazon Nova Lite."""
 
 import boto3
 import json
@@ -18,18 +18,18 @@ logger = logging.getLogger(__name__)
 
 
 class BedrockService:
-    """Service for AWS Bedrock operations with Claude 4."""
+    """Service for AWS Bedrock operations with Amazon Nova Lite."""
     
     def __init__(self):
         self.bedrock_client = boto3.client('bedrock-runtime', region_name=settings.aws_region)
         self.model_id = settings.bedrock_model_id
         
-        # Retry configuration optimized for Haiku
-        self.max_retries = 5  # Reasonable retries for Haiku
-        self.base_delay = 1.0  # Start with 1 second delay
-        self.max_delay = 60.0  # Max 60s delay (was 180s)
+        # Retry configuration optimized for Nova Lite
+        self.max_retries = 3  # Nova Lite is generally more reliable
+        self.base_delay = 0.5  # Start with 0.5 second delay
+        self.max_delay = 30.0  # Max 30s delay
         self.backoff_multiplier = 2.0  # Standard exponential backoff
-        self.jitter_range = 0.3  # Jitter to spread requests
+        self.jitter_range = 0.2  # Less jitter needed
     
     def _calculate_delay(self, attempt: int) -> float:
         """Calculate exponential backoff delay with jitter."""
@@ -135,35 +135,51 @@ class BedrockService:
         temperature: float = 0.7,
         system_prompt: Optional[str] = None
     ) -> str:
-        """Invoke Claude 4 model with a prompt and retry logic."""
+        """Invoke Amazon Nova Lite model with a prompt and retry logic."""
         
         # Log input token usage
         full_input = f"{system_prompt or ''}\n\n{prompt}"
         input_stats = token_counter.estimate_tokens_detailed(full_input)
         logger.info(
-            f"🧠 Claude Input: {input_stats['estimated_tokens']} tokens "
+            f"🧠 Nova Lite Input: {input_stats['estimated_tokens']} tokens "
             f"({input_stats['characters']} chars, {input_stats['words']} words) "
             f"| Max Output: {max_tokens} tokens"
         )
         
         def _invoke_model():
             """Internal function to invoke the model (for retry logic)."""
-            # Prepare the request body for Claude 4 with correct format
-            messages = [{
-                "role": "user", 
-                "content": prompt
-            }]
+            # Prepare the request body for Nova Lite (official AWS format)
             
-            body = {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": max_tokens,
+            # Define system prompt in Nova Lite format
+            system_list = []
+            if system_prompt:
+                system_list = [{"text": system_prompt}]
+            
+            # Define messages in Nova Lite format
+            message_list = [
+                {
+                    "role": "user", 
+                    "content": [{"text": prompt}]
+                }
+            ]
+            
+            # Configure inference parameters
+            inf_params = {
+                "maxTokens": max_tokens,
                 "temperature": temperature,
-                "messages": messages
+                "topP": 0.9
             }
             
-            # Add system prompt as a separate parameter if provided
-            if system_prompt:
-                body["system"] = system_prompt
+            # Build request body according to AWS docs
+            body = {
+                "schemaVersion": "messages-v1",
+                "messages": message_list,
+                "inferenceConfig": inf_params
+            }
+            
+            # Add system prompt if provided
+            if system_list:
+                body["system"] = system_list
             
             response = self.bedrock_client.invoke_model(
                 modelId=self.model_id,
@@ -173,21 +189,24 @@ class BedrockService:
             
             response_body = json.loads(response['body'].read())
             
-            if 'content' in response_body and response_body['content']:
-                output_text = response_body['content'][0]['text']
-                
-                # Log complete token usage
-                token_counter.log_token_usage(
-                    operation="bedrock_claude_invoke",
-                    input_text=full_input,
-                    output_text=output_text,
-                    model_id=self.model_id
-                )
-                
-                return output_text
-            else:
-                logger.error(f"Unexpected response format: {response_body}")
-                raise ValueError("Invalid response format from Claude")
+            # Parse Nova Lite response format
+            if 'output' in response_body and 'message' in response_body['output']:
+                message = response_body['output']['message']
+                if 'content' in message and message['content']:
+                    output_text = message['content'][0]['text']
+                    
+                    # Log complete token usage
+                    token_counter.log_token_usage(
+                        operation="bedrock_nova_invoke",
+                        input_text=full_input,
+                        output_text=output_text,
+                        model_id=self.model_id
+                    )
+                    
+                    return output_text
+            
+            logger.error(f"Unexpected response format: {response_body}")
+            raise ValueError("Invalid response format from Nova Lite")
         
         try:
             # Use coordinator to space out the request, then apply retry logic
@@ -202,8 +221,8 @@ class BedrockService:
             logger.error(f"Bedrock API error after retries: {e}")
             raise ValueError(f"Bedrock API error: {e.response['Error']['Message']}")
         except Exception as e:
-            logger.error(f"Error invoking Claude after retries: {e}")
-            raise ValueError(f"Error invoking Claude: {str(e)}")
+            logger.error(f"Error invoking Nova Lite after retries: {e}")
+            raise ValueError(f"Error invoking Nova Lite: {str(e)}")
     
     async def analyze_content(self, content: str, content_type: str) -> Dict[str, Any]:
         """Analyze content and extract learning structure."""
