@@ -36,10 +36,25 @@ class QuizService {
         target_difficulty: difficulty || 'adaptive',
         num_questions: numQuestions || 5
       });
-      
+
       return response.data.data;
     } catch (error) {
       console.error('Error generating quiz:', error);
+      throw error;
+    }
+  }
+
+  async generateQuizForMicroLesson(microLessonId: string, difficulty?: string, numQuestions?: number): Promise<Quiz> {
+    try {
+      const response = await api.post('/api/v1/quiz/generate', {
+        micro_lesson_id: microLessonId,
+        target_difficulty: difficulty || 'intermediate',
+        num_questions: numQuestions || 5
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error generating quiz for micro-lesson:', error);
       throw error;
     }
   }

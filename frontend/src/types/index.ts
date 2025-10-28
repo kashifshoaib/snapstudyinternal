@@ -28,13 +28,25 @@ export interface MicroLesson {
   micro_lesson_id: string;
   lesson_id: string;
   title: string;
+  content: string;
   summary: string;
-  sequence_number: number;
+  order: number; // Maps to sequence_number from backend
+  estimated_duration_minutes: number;
+  key_concepts?: string[];
+  learning_objectives?: string[];
+  examples?: Array<{ title: string; description: string }>;
+  visual_aids?: string[];
+  quiz?: {
+    quiz_id: string;
+    questions: any[];
+    total_questions: number;
+    passing_score: number;
+  };
   video_url?: string;
   audio_url?: string;
   video_duration?: string;
   audio_duration?: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface QuizQuestion {
@@ -42,6 +54,7 @@ export interface QuizQuestion {
   question: string;
   options: string[];
   correct_answer: string;
+  question_type?: string; // 'multiple_choice', 'true_false', 'short_answer'
 }
 
 

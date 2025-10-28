@@ -465,21 +465,55 @@ I adapt to your learning style and provide personalized help. Just ask me anythi
         }
     
     async def _handle_general_chat(
-        self, 
-        intent_analysis: Dict[str, Any], 
+        self,
+        intent_analysis: Dict[str, Any],
         context: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Handle general conversational responses using agent reasoning."""
+        """Handle general conversational responses using agent reasoning with relevance guardrail."""
         user_message = context.get('user_message', '')
         current_lesson = context.get('current_lesson', {})
         conversation_history = context.get('conversation_history', [])
-        
+
         # Extract agent's reasoning and insights
         agent_reasoning = intent_analysis.get('reasoning', '')
         agent_insights = intent_analysis.get('insights', '')
         suggested_response = intent_analysis.get('suggested_response', '')
         direct_response = intent_analysis.get('response', '')  # Direct response from agent
-        
+
+        # Check query relevance if there's a current lesson
+        if current_lesson and current_lesson.get('content'):
+            lesson_context = f"{current_lesson.get('title', '')}\n{current_lesson.get('content', '')[:1000]}"
+
+            relevance_check = await self.bedrock.check_query_relevance(
+                user_message=user_message,
+                lesson_context=lesson_context
+            )
+
+            logger.info(f"🛡️ Relevance check for chat: {relevance_check.get('category')} "
+                       f"(confidence: {relevance_check.get('confidence')})")
+
+            # If query is unrelated, return polite decline
+            if not relevance_check.get('is_relevant', True):
+                polite_decline = (
+                    "I appreciate your question, but I'm here to help you with the current lesson. "
+                    f"Your question seems to be about something different from what we're studying right now. "
+                    f"\n\nLet's focus on the lesson at hand. Feel free to ask me questions about:\n"
+                    f"- The key concepts in this lesson\n"
+                    f"- Examples or explanations of the topics covered\n"
+                    f"- Practice questions or summaries\n\n"
+                    f"How can I help you understand this lesson better?"
+                )
+
+                return {
+                    'response': polite_decline,
+                    'response_type': 'chat',
+                    'metadata': {
+                        'source': 'relevance_guardrail',
+                        'relevance_check': relevance_check,
+                        'conversation_type': 'off_topic_declined'
+                    }
+                }
+
         # If agent provided a direct response, use it (especially for fallback cases)
         if direct_response and len(direct_response.strip()) > 10:
             logger.info(f"🎯 Using direct agent response: {direct_response[:100]}...")

@@ -11,6 +11,7 @@ class Settings:
     
     # AWS Configuration
     aws_region: str = os.getenv("AWS_REGION", "us-east-1")
+    aws_profile: str = os.getenv("AWS_PROFILE", "")
     
     # DynamoDB Table Names
     users_table: str = os.getenv("USERS_TABLE", "SnapStudy-Users")
@@ -23,8 +24,8 @@ class Settings:
     video_lessons_table: str = os.getenv("VIDEO_LESSONS_TABLE", "SnapStudy-VideoLessons")
     
     # S3 Configuration
-    content_bucket: str = os.getenv("CONTENT_BUCKET", "snapstudy-content")
-    s3_bucket_name: str = os.getenv("S3_BUCKET_NAME", "snapstudy-content")
+    content_bucket: str = os.getenv("CONTENT_BUCKET", "snapstudy-content-054037102331-us-east-1")
+    s3_bucket_name: str = os.getenv("S3_BUCKET_NAME", "snapstudy-content-054037102331-us-east-1")
     audio_content_bucket: str = os.getenv("AUDIO_CONTENT_BUCKET", "snapstudy-audio-content")
     
     # Cognito Configuration

@@ -18,6 +18,7 @@ from botocore.exceptions import ClientError
 from ..config import settings
 from .dynamodb import db_service
 from .bedrock import bedrock_service
+from ..utils.aws_client import get_boto3_client
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,8 @@ class AudioMicroLessonGenerator:
     """
     
     def __init__(self):
-        self.polly_client = boto3.client('polly', region_name=settings.aws_region)
-        self.s3_client = boto3.client('s3', region_name=settings.aws_region)
+        self.polly_client = get_boto3_client('polly')
+        self.s3_client = get_boto3_client('s3')
         self.bedrock = bedrock_service
         self.db = db_service
         

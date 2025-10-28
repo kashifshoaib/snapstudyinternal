@@ -7,6 +7,7 @@ import logging
 import time
 
 from ..config import settings
+from ..utils.aws_client import get_boto3_client
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,8 @@ class TextractService:
     """Service for AWS Textract operations."""
     
     def __init__(self):
-        self.textract_client = boto3.client('textract', region_name=settings.aws_region)
-        self.s3_client = boto3.client('s3', region_name=settings.aws_region)
+        self.textract_client = get_boto3_client('textract')
+        self.s3_client = get_boto3_client('s3')
     
     async def extract_text_from_s3(self, bucket_name: str, object_key: str) -> Dict[str, Any]:
         """Extract text from a PDF stored in S3."""

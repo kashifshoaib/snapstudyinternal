@@ -8,6 +8,7 @@ import time
 import uuid
 
 from ..config import settings
+from ..utils.aws_client import get_boto3_client
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,8 @@ class TranscribeService:
     """Service for AWS Transcribe operations."""
     
     def __init__(self):
-        self.transcribe_client = boto3.client('transcribe', region_name=settings.aws_region)
-        self.s3_client = boto3.client('s3', region_name=settings.aws_region)
+        self.transcribe_client = get_boto3_client('transcribe')
+        self.s3_client = get_boto3_client('s3')
     
     async def transcribe_audio_from_s3(
         self, 

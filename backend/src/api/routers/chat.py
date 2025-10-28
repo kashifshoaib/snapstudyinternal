@@ -35,6 +35,7 @@ class ChatMessageRequest(BaseModel):
     """Request model for chat messages."""
     message: str
     lesson_id: Optional[str] = None
+    micro_lesson_id: Optional[str] = None  # For more specific context
     session_id: Optional[str] = None
 
 
@@ -133,8 +134,9 @@ async def send_chat_message(
             user_id = user.get('user_id', 'anonymous')
         message = data.get('message', '')
         lesson_id = data.get('lesson_id')
+        micro_lesson_id = data.get('micro_lesson_id')
         session_id = data.get('session_id')
-        
+
         logger.info(f"Parsed message: '{message}'")
 
         # Validate message
@@ -152,12 +154,28 @@ async def send_chat_message(
             'user_profile': user
         }
 
-        # Add lesson context if provided
-        if lesson_id:
+        # Add lesson context if provided - prioritize micro-lesson for more specific context
+        if micro_lesson_id:
+            try:
+                micro_lesson = await db_service.get_micro_lesson(micro_lesson_id)
+                if micro_lesson:
+                    context['current_lesson'] = {
+                        'lesson_id': micro_lesson.get('lesson_id'),
+                        'micro_lesson_id': micro_lesson_id,
+                        'title': micro_lesson.get('title', 'Current Lesson'),
+                        'content': micro_lesson.get('content', ''),
+                        'summary': micro_lesson.get('summary', ''),
+                        'key_concepts': micro_lesson.get('key_concepts', [])
+                    }
+                    logger.info(f"Loaded micro-lesson context: {micro_lesson.get('title')}")
+            except Exception as e:
+                logger.warning(f"Could not load micro-lesson context: {e}")
+        elif lesson_id:
             try:
                 lesson = await db_service.get_lesson(lesson_id)
                 if lesson:
                     context['current_lesson'] = lesson
+                    logger.info(f"Loaded lesson context: {lesson.get('title')}")
             except Exception as e:
                 logger.warning(f"Could not load lesson context: {e}")
 

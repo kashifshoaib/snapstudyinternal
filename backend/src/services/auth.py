@@ -16,6 +16,7 @@ from botocore.exceptions import ClientError
 from fastapi import HTTPException, status
 
 from ..config import settings
+from ..utils.aws_client import get_boto3_client
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class AuthService:
     """Service for user authentication using AWS Cognito."""
 
     def __init__(self):
-        self.cognito_client = boto3.client('cognito-idp', region_name=settings.aws_region)
+        self.cognito_client = get_boto3_client('cognito-idp')
         self.user_pool_id = settings.user_pool_id
         self.client_id = settings.user_pool_client_id
         self.client_secret = getattr(settings, 'user_pool_client_secret', None)

@@ -19,6 +19,7 @@ from ..config import settings
 from .dynamodb import db_service
 from .bedrock import bedrock_service
 from .audio_generation import audio_generation_service
+from ..utils.aws_client import get_boto3_client
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +37,8 @@ class VideoMicroLessonGenerator:
     """
     
     def __init__(self):
-        self.bedrock_client = boto3.client('bedrock-runtime', region_name=settings.aws_region)
-        self.s3_client = boto3.client('s3', region_name=settings.aws_region)
+        self.bedrock_client = get_boto3_client('bedrock-runtime')
+        self.s3_client = get_boto3_client('s3')
         self.bedrock = bedrock_service
         self.db = db_service
         self.audio_service = audio_generation_service

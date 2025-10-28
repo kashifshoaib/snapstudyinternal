@@ -13,8 +13,9 @@ from decimal import Decimal
 
 from ..config import settings
 from ..utils.retry import dynamodb_retry, DYNAMODB_RETRY_CONFIG
+from ..utils.aws_client import get_boto3_resource
 from ..middleware.error_handler import (
-    ResourceNotFoundError, 
+    ResourceNotFoundError,
     ServiceUnavailableError,
     ValidationError,
     handle_aws_error
@@ -29,7 +30,7 @@ class DynamoDBService:
     """Service for DynamoDB operations."""
     
     def __init__(self):
-        self.dynamodb = boto3.resource('dynamodb', region_name=settings.aws_region)
+        self.dynamodb = get_boto3_resource('dynamodb')
         self.users_table = self.dynamodb.Table(settings.users_table)
         self.lessons_table = self.dynamodb.Table(settings.lessons_table)
         self.micro_lessons_table = self.dynamodb.Table(settings.micro_lessons_table)
@@ -520,6 +521,18 @@ class DynamoDBService:
         self.quizzes_table.put_item(Item=serialized_item)
         return self._deserialize_item(serialized_item)
     
+    async def get_quiz(self, quiz_id: str) -> Optional[Dict[str, Any]]:
+        """Get quiz by quiz_id."""
+        try:
+            response = self.quizzes_table.get_item(
+                Key={'quiz_id': quiz_id}
+            )
+            item = response.get('Item')
+            return self._deserialize_item(item) if item else None
+        except Exception as e:
+            logger.error(f"Error getting quiz {quiz_id}: {e}")
+            return None
+
     async def get_micro_lesson_quiz(self, micro_lesson_id: str) -> Optional[Dict[str, Any]]:
         """Get quiz for a micro-lesson."""
         response = self.quizzes_table.query(
@@ -528,7 +541,29 @@ class DynamoDBService:
         )
         items = response.get('Items', [])
         return self._deserialize_item(items[0]) if items else None
-    
+
+    async def save_quiz_result(self, result_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Save quiz result for analytics."""
+        try:
+            result_id = str(uuid.uuid4())
+            now = datetime.now(timezone.utc)
+
+            item = {
+                'result_id': result_id,
+                'created_at': now.isoformat(),
+                **result_data
+            }
+
+            # Store in user engagement table for analytics
+            serialized_item = self._serialize_item(item)
+            self.user_engagement_table.put_item(Item=serialized_item)
+
+            logger.info(f"Quiz result saved: {result_id}")
+            return self._deserialize_item(serialized_item)
+        except Exception as e:
+            logger.error(f"Error saving quiz result: {e}")
+            raise
+
     # Engagement tracking
     async def track_engagement(self, engagement_data: Dict[str, Any]) -> Dict[str, Any]:
         """Track user engagement event."""

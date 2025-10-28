@@ -24,6 +24,7 @@ const MainApp: React.FC<MainAppProps> = ({ user, onLogout }) => {
   const [microLessons, setMicroLessons] = useState<MicroLesson[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [processingLesson, setProcessingLesson] = useState(false);
 
   useEffect(() => {
     initializeUser();
@@ -32,17 +33,18 @@ const MainApp: React.FC<MainAppProps> = ({ user, onLogout }) => {
   const initializeUser = async () => {
     try {
       setLoading(true);
-      
+
       // Load user lessons
       const userLessons = await lessonService.getUserLessons();
       setLessons(userLessons);
-      
+
       if (userLessons.length > 0) {
         setSelectedLesson(userLessons[0]);
+        // Load existing micro-lessons from cache/database (no generation on reload)
         const microLessonsData = await lessonService.getMicroLessons(userLessons[0].lesson_id);
         setMicroLessons(microLessonsData);
       }
-      
+
     } catch (error) {
       console.error('Error initializing user:', error);
     } finally {
@@ -53,6 +55,7 @@ const MainApp: React.FC<MainAppProps> = ({ user, onLogout }) => {
   const handleLessonSelect = async (lesson: Lesson) => {
     setSelectedLesson(lesson);
     try {
+      // Load existing micro-lessons from cache/database (no generation on select)
       const microLessonsData = await lessonService.getMicroLessons(lesson.lesson_id);
       setMicroLessons(microLessonsData);
     } catch (error) {
@@ -62,16 +65,63 @@ const MainApp: React.FC<MainAppProps> = ({ user, onLogout }) => {
 
   const handleLessonUpload = async (file: File) => {
     try {
+      setProcessingLesson(true);
       const newLesson = await lessonService.uploadLesson(file);
       setLessons(prev => [newLesson, ...prev]);
       setSelectedLesson(newLesson);
-      
-      // Load micro lessons for the new lesson
-      const microLessonsData = await lessonService.getMicroLessons(newLesson.lesson_id);
-      setMicroLessons(microLessonsData);
+
+      // Set empty micro lessons initially to show loading state
+      setMicroLessons([]);
+
+      // Poll for processing status and load micro lessons when ready
+      await pollForMicroLessons(newLesson.lesson_id);
+
     } catch (error) {
       console.error('Error uploading lesson:', error);
+      setProcessingLesson(false);
     }
+  };
+
+  const pollForMicroLessons = async (lessonId: string, maxAttempts = 30) => {
+    let attempts = 0;
+
+    const poll = async (): Promise<void> => {
+      try {
+        attempts++;
+
+        // Try to load micro lessons
+        const microLessonsData = await lessonService.getMicroLessons(lessonId);
+
+        if (microLessonsData.length > 0) {
+          // Success! Micro lessons are ready
+          setMicroLessons(microLessonsData);
+          setProcessingLesson(false);
+          console.log('✅ Micro-lessons loaded successfully:', microLessonsData.length);
+          return;
+        }
+
+        // Not ready yet, continue polling
+        if (attempts < maxAttempts) {
+          console.log(`⏳ Waiting for micro-lessons... (attempt ${attempts}/${maxAttempts})`);
+          setTimeout(() => poll(), 2000); // Poll every 2 seconds
+        } else {
+          // Max attempts reached
+          console.error('❌ Timeout waiting for micro-lessons');
+          setProcessingLesson(false);
+        }
+
+      } catch (error) {
+        console.error('Error polling for micro-lessons:', error);
+        if (attempts < maxAttempts) {
+          setTimeout(() => poll(), 2000);
+        } else {
+          setProcessingLesson(false);
+        }
+      }
+    };
+
+    // Start polling
+    poll();
   };
 
   if (loading) {
@@ -109,6 +159,7 @@ const MainApp: React.FC<MainAppProps> = ({ user, onLogout }) => {
               lesson={selectedLesson}
               microLessons={microLessons}
               user={user}
+              isProcessing={processingLesson}
             />
           </main>
 

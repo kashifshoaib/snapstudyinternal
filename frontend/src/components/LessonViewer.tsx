@@ -10,6 +10,7 @@ interface LessonViewerProps {
   lesson: Lesson | null;
   microLessons: MicroLesson[];
   user: User;
+  isProcessing?: boolean;
   onProgressUpdate?: (progress: number) => void;
 }
 
@@ -38,11 +39,12 @@ const SummaryIcon = () => (
   </svg>
 );
 
-const LessonViewer: React.FC<LessonViewerProps> = ({ 
-  lesson, 
-  microLessons, 
-  user, 
-  onProgressUpdate 
+const LessonViewer: React.FC<LessonViewerProps> = ({
+  lesson,
+  microLessons,
+  user,
+  isProcessing = false,
+  onProgressUpdate
 }) => {
   const [adaptiveState, setAdaptiveState] = useState<AdaptiveLearningState | null>(null);
   const [currentMicroLesson, setCurrentMicroLesson] = useState<MicroLesson | null>(null);
@@ -65,6 +67,8 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
     try {
       setLoading('initialization', true, { timeout: 10000 });
+      setError(null); // Clear any previous errors
+
       const state = await lessonService.initializeAdaptiveLearning(
         lessonId,
         JSON.parse(userPreferencesJson)
@@ -75,33 +79,61 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
       const firstMicroLesson = microLessons.find(ml => ml.micro_lesson_id === state.current_micro_lesson_id);
       if (firstMicroLesson) {
         setCurrentMicroLesson(firstMicroLesson);
+        console.log('✅ Adaptive learning initialized with micro-lesson:', firstMicroLesson.title);
       }
     } catch (error) {
       console.error('Failed to initialize adaptive learning:', error);
-      setError('Failed to start adaptive learning session');
-      // Fallback to first micro lesson
+      // Fallback: directly load first micro lesson without adaptive state
       if (microLessons.length > 0) {
+        console.log('⚠️ Using fallback: Loading first micro-lesson directly');
         setCurrentMicroLesson(microLessons[0]);
+        setError(null); // Clear error since we have a fallback
+      } else {
+        setError('Failed to load lesson content');
       }
     } finally {
       setLoading('initialization', false);
     }
   }, [lessonId, microLessonCount, userPreferencesJson, microLessons, setLoading]);
 
-  // Initialize adaptive learning state only when lesson changes
+  // Reset state when lesson changes
+  useEffect(() => {
+    console.log('📚 Lesson changed to:', lessonId);
+    setCurrentMicroLesson(null);
+    setAdaptiveState(null);
+    setShowQuiz(false);
+    setError(null);
+  }, [lessonId]);
+
+  // Display micro-lessons when available, but don't auto-initialize adaptive learning
   useEffect(() => {
     if (lessonId && microLessonCount > 0) {
-      initializeAdaptiveLearning();
+      // Simply display the first micro-lesson without initializing adaptive session
+      if (!currentMicroLesson) {
+        console.log('📖 Displaying first micro-lesson for:', lessonId);
+        setCurrentMicroLesson(microLessons[0]);
+      }
+    } else if (lessonId && microLessonCount === 0 && !isProcessing) {
+      console.log('⏳ Lesson selected but no micro-lessons available...');
+      setCurrentMicroLesson(null);
+      setError(null);
     }
-  }, [lessonId, microLessonCount, initializeAdaptiveLearning]);
+  }, [lessonId, microLessonCount, microLessons, currentMicroLesson, isProcessing]);
 
   const handleNextContent = useCallback(async () => {
-    if (!lesson || !adaptiveState) return;
+    if (!lesson) return;
+
+    // If adaptive state is not initialized, initialize it first
+    if (!adaptiveState) {
+      console.log('🚀 Initializing adaptive learning session on Continue click...');
+      await initializeAdaptiveLearning();
+      return;
+    }
 
     try {
       setLoading('nextContent', true, { timeout: 15000 });
       setTransitionMessage('Determining your next learning step...');
-      
+
       const nextContent = await lessonService.getNextAdaptiveContent(
         lesson.lesson_id,
         adaptiveState.current_micro_lesson_id,
@@ -124,7 +156,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
       } else if (nextContent.content_type === 'micro_lesson' && nextContent.micro_lesson) {
         setCurrentMicroLesson(nextContent.micro_lesson);
         setTransitionMessage(nextContent.transition_reason);
-        
+
         // Update adaptive state
         setAdaptiveState(prev => prev ? {
           ...prev,
@@ -146,7 +178,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
     } finally {
       setLoading('nextContent', false);
     }
-  }, [lesson, adaptiveState, onProgressUpdate]);
+  }, [lesson, adaptiveState, onProgressUpdate, initializeAdaptiveLearning]);
 
   const handleQuizComplete = useCallback(async (results: any) => {
     setShowQuiz(false);
@@ -209,10 +241,12 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
     );
   }
 
-  if (showQuiz && lesson) {
+  if (showQuiz && lesson && currentMicroLesson) {
     return (
       <QuizInterface
         lessonId={lesson.lesson_id}
+        microLessonId={currentMicroLesson.micro_lesson_id}
+        existingQuiz={currentMicroLesson.quiz}
         user={user}
         onQuizComplete={handleQuizComplete}
         onClose={() => setShowQuiz(false)}
@@ -245,7 +279,20 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
           </div>
         )}
 
-        {!lesson || microLessons.length === 0 ? (
+        {isProcessing || (lesson && microLessons.length === 0 && !error) ? (
+          <div className="processing-state">
+            <div className="processing-header">
+              <h3>🔄 Processing Your Lesson</h3>
+              <p>Generating personalized micro-lessons...</p>
+            </div>
+            <div className="processing-progress">
+              <div className="progress-bar-container">
+                <div className="progress-bar-fill animating"></div>
+              </div>
+              <p className="progress-text">This usually takes 30-60 seconds</p>
+            </div>
+          </div>
+        ) : !lesson ? (
           <>
             {/* Default content matching snapstudy.html */}
             <div className="card">
@@ -305,7 +352,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 <h3>{currentMicroLesson.title}</h3>
                 {adaptiveState && (
                   <span className="lesson-sequence">
-                    Lesson {currentMicroLesson.sequence_number} of {microLessons.length}
+                    Lesson {currentMicroLesson.order} of {microLessons.length}
                   </span>
                 )}
               </div>

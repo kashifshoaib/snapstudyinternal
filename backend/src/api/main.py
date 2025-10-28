@@ -3,11 +3,13 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 
 import logging
 import time
@@ -35,6 +37,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# CORS preflight middleware
+class CORSPreflightMiddleware(BaseHTTPMiddleware):
+    """Handle CORS preflight requests before they reach route validation."""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            # Log CORS preflight request for debugging
+            logger.info(f"CORS preflight request: {request.url.path} from origin: {request.headers.get('origin', 'None')}")
+            
+            # Allow all origins
+            origin = "*"
+            
+            response = Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD",
+                    "Access-Control-Allow-Headers": "Accept, Accept-Language, Content-Language, Content-Type, Authorization, X-Requested-With, Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+                    "Access-Control-Max-Age": "86400",  # 24 hours
+                }
+            )
+            
+            logger.info(f"CORS preflight response: 200 OK with origin: {origin}")
+            return response
+            
+        return await call_next(request)
+
 # Create FastAPI app
 app = FastAPI(
     title="SnapStudy API",
@@ -44,21 +73,25 @@ app = FastAPI(
     redoc_url="/redoc" if settings.api_version != "production" else None
 )
 
+# Add CORS preflight middleware first (processes OPTIONS requests before validation)
+app.add_middleware(CORSPreflightMiddleware)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
 # Add exception handlers
 app.add_exception_handler(SnapStudyException, snapstudy_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
-
-# Add simple CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
 
 # Removed dependencies import
 
@@ -84,6 +117,11 @@ async def root():
         "status": "healthy"
     }
 
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    """Handle all OPTIONS requests."""
+    return {"message": "OK"}
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -108,8 +146,8 @@ async def health_check():
         aws_status = "healthy"
         try:
             # Basic AWS connectivity check
-            import boto3
-            sts = boto3.client('sts')
+            from ..utils.aws_client import get_boto3_client
+            sts = get_boto3_client('sts')
             sts.get_caller_identity()
         except Exception as e:
             aws_status = f"unhealthy: {str(e)}"
@@ -364,14 +402,23 @@ async def startup_event():
     import time
     app.state.start_time = time.time()
     logger.info("SnapStudy API starting up...")
-    
+
+    # Run AWS health checks
+    try:
+        from ..utils.aws_health_check import run_startup_aws_checks
+        aws_status = await run_startup_aws_checks()
+        app.state.aws_health = aws_status
+    except Exception as e:
+        logger.error(f"AWS health check failed: {str(e)}")
+        app.state.aws_health = {'error': str(e)}
+
     # Initialize services
     try:
         db_service.initialize()
         logger.info("Database service initialized")
     except Exception as e:
         logger.error(f"Failed to initialize database service: {str(e)}")
-    
+
     logger.info("SnapStudy API startup complete")
 
 @app.on_event("shutdown")

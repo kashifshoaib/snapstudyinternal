@@ -9,16 +9,112 @@ from datetime import datetime, timedelta
 import mimetypes
 
 from ..config import settings
+from ..utils.aws_client import get_boto3_client
 
 logger = logging.getLogger(__name__)
 
 
 class S3Service:
     """Service for AWS S3 operations."""
-    
+
     def __init__(self):
-        self.s3_client = boto3.client('s3', region_name=settings.aws_region)
+        self.s3_client = get_boto3_client('s3')
         self.bucket_name = settings.content_bucket
+
+    def ensure_bucket_exists(self) -> bool:
+        """
+        Check if the S3 bucket exists, and create it if it doesn't.
+
+        Returns:
+            True if bucket exists or was created successfully
+        """
+        try:
+            # Try to get bucket location (this will fail if bucket doesn't exist)
+            self.s3_client.head_bucket(Bucket=self.bucket_name)
+            logger.info(f"S3 bucket {self.bucket_name} already exists")
+            return True
+
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+
+            # If bucket doesn't exist, create it
+            if error_code == '404':
+                try:
+                    logger.info(f"Creating S3 bucket: {self.bucket_name}")
+
+                    # Create bucket with region-specific configuration
+                    region = settings.aws_region
+                    if region == 'us-east-1':
+                        # us-east-1 doesn't require LocationConstraint
+                        self.s3_client.create_bucket(Bucket=self.bucket_name)
+                    else:
+                        self.s3_client.create_bucket(
+                            Bucket=self.bucket_name,
+                            CreateBucketConfiguration={'LocationConstraint': region}
+                        )
+
+                    # Enable server-side encryption by default
+                    self.s3_client.put_bucket_encryption(
+                        Bucket=self.bucket_name,
+                        ServerSideEncryptionConfiguration={
+                            'Rules': [
+                                {
+                                    'ApplyServerSideEncryptionByDefault': {
+                                        'SSEAlgorithm': 'AES256'
+                                    },
+                                    'BucketKeyEnabled': True
+                                }
+                            ]
+                        }
+                    )
+
+                    # Enable versioning for data protection
+                    self.s3_client.put_bucket_versioning(
+                        Bucket=self.bucket_name,
+                        VersioningConfiguration={'Status': 'Enabled'}
+                    )
+
+                    # Block public access by default
+                    self.s3_client.put_public_access_block(
+                        Bucket=self.bucket_name,
+                        PublicAccessBlockConfiguration={
+                            'BlockPublicAcls': True,
+                            'IgnorePublicAcls': True,
+                            'BlockPublicPolicy': True,
+                            'RestrictPublicBuckets': True
+                        }
+                    )
+
+                    # Add lifecycle policy to manage cache data
+                    self.s3_client.put_bucket_lifecycle_configuration(
+                        Bucket=self.bucket_name,
+                        LifecycleConfiguration={
+                            'Rules': [
+                                {
+                                    'Id': 'DeleteOldCacheData',
+                                    'Status': 'Enabled',
+                                    'Filter': {'Prefix': 'cache/'},
+                                    'Expiration': {'Days': 30},
+                                    'NoncurrentVersionExpiration': {'NoncurrentDays': 7}
+                                }
+                            ]
+                        }
+                    )
+
+                    logger.info(f"Successfully created S3 bucket: {self.bucket_name}")
+                    return True
+
+                except ClientError as create_error:
+                    logger.error(f"Failed to create S3 bucket: {create_error}")
+                    raise ValueError(f"Failed to create S3 bucket: {create_error.response['Error']['Message']}")
+            else:
+                # Other errors (like permission denied)
+                logger.error(f"Error accessing S3 bucket: {e}")
+                raise ValueError(f"Error accessing S3 bucket: {e.response['Error']['Message']}")
+
+        except Exception as e:
+            logger.error(f"Unexpected error ensuring bucket exists: {e}")
+            raise ValueError(f"Unexpected error: {str(e)}")
     
     async def upload_file(
         self, 
@@ -277,17 +373,17 @@ class S3Service:
         try:
             # Get bucket location
             location_response = self.s3_client.get_bucket_location(Bucket=self.bucket_name)
-            
+
             # Get bucket versioning
             versioning_response = self.s3_client.get_bucket_versioning(Bucket=self.bucket_name)
-            
+
             # Get bucket encryption
             try:
                 encryption_response = self.s3_client.get_bucket_encryption(Bucket=self.bucket_name)
                 encryption_config = encryption_response.get('ServerSideEncryptionConfiguration')
             except ClientError:
                 encryption_config = None
-            
+
             return {
                 'bucket_name': self.bucket_name,
                 'region': location_response.get('LocationConstraint') or 'us-east-1',
@@ -295,10 +391,178 @@ class S3Service:
                 'encryption_enabled': encryption_config is not None,
                 'encryption_config': encryption_config
             }
-            
+
         except ClientError as e:
             logger.error(f"S3 bucket info error: {e}")
             raise ValueError(f"S3 bucket info error: {e.response['Error']['Message']}")
+
+    async def cache_lesson_data(
+        self,
+        lesson_id: str,
+        data_type: str,
+        data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Cache lesson-related data (micro-lessons, quizzes) to S3.
+
+        Args:
+            lesson_id: The lesson ID
+            data_type: Type of data ('micro_lessons' or 'quiz')
+            data: The data to cache
+
+        Returns:
+            Cache metadata
+        """
+        try:
+            import json
+
+            # Create cache key
+            object_key = f"cache/lessons/{lesson_id}/{data_type}.json"
+
+            # Convert data to JSON
+            json_data = json.dumps(data, indent=2)
+
+            # Upload to S3
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=object_key,
+                Body=json_data.encode('utf-8'),
+                ContentType='application/json',
+                Metadata={
+                    'lesson_id': lesson_id,
+                    'data_type': data_type,
+                    'cached_at': datetime.utcnow().isoformat()
+                },
+                ServerSideEncryption='AES256'
+            )
+
+            logger.info(f"Cached {data_type} for lesson {lesson_id} to S3")
+
+            return {
+                'object_key': object_key,
+                'lesson_id': lesson_id,
+                'data_type': data_type,
+                'cached_at': datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to cache lesson data: {e}")
+            raise ValueError(f"Failed to cache lesson data: {str(e)}")
+
+    async def get_cached_lesson_data(
+        self,
+        lesson_id: str,
+        data_type: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve cached lesson data from S3.
+
+        Args:
+            lesson_id: The lesson ID
+            data_type: Type of data ('micro_lessons' or 'quiz')
+
+        Returns:
+            Cached data or None if not found
+        """
+        try:
+            import json
+
+            object_key = f"cache/lessons/{lesson_id}/{data_type}.json"
+
+            # Try to get from S3
+            response = self.s3_client.get_object(
+                Bucket=self.bucket_name,
+                Key=object_key
+            )
+
+            json_data = response['Body'].read().decode('utf-8')
+            data = json.loads(json_data)
+
+            logger.info(f"Retrieved cached {data_type} for lesson {lesson_id} from S3")
+
+            return data
+
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                # Cache miss is normal, don't log as info to reduce noise
+                logger.debug(f"No cached {data_type} found for lesson {lesson_id}")
+                return None
+            else:
+                logger.error(f"Error retrieving cached data: {e}")
+                return None
+        except Exception as e:
+            logger.error(f"Error retrieving cached data: {e}")
+            return None
+
+    def check_cache_exists(self, lesson_id: str, data_type: str) -> bool:
+        """
+        Quickly check if cached data exists without retrieving it.
+        Uses head_object which is faster than get_object.
+
+        Args:
+            lesson_id: The lesson ID
+            data_type: Type of data ('micro_lessons' or 'quiz')
+
+        Returns:
+            True if cache exists, False otherwise
+        """
+        try:
+            object_key = f"cache/lessons/{lesson_id}/{data_type}.json"
+
+            # Use head_object for fast existence check
+            self.s3_client.head_object(
+                Bucket=self.bucket_name,
+                Key=object_key
+            )
+
+            return True
+
+        except ClientError as e:
+            if e.response['Error']['Code'] in ['NoSuchKey', '404']:
+                return False
+            else:
+                logger.error(f"Error checking cache existence: {e}")
+                return False
+        except Exception as e:
+            logger.error(f"Error checking cache existence: {e}")
+            return False
+
+    async def clear_lesson_cache(self, lesson_id: str) -> bool:
+        """
+        Clear all cached data for a lesson.
+
+        Args:
+            lesson_id: The lesson ID
+
+        Returns:
+            True if successful
+        """
+        try:
+            prefix = f"cache/lessons/{lesson_id}/"
+
+            # List all objects with this prefix
+            response = self.s3_client.list_objects_v2(
+                Bucket=self.bucket_name,
+                Prefix=prefix
+            )
+
+            # Delete all objects
+            objects_to_delete = []
+            for obj in response.get('Contents', []):
+                objects_to_delete.append({'Key': obj['Key']})
+
+            if objects_to_delete:
+                self.s3_client.delete_objects(
+                    Bucket=self.bucket_name,
+                    Delete={'Objects': objects_to_delete}
+                )
+                logger.info(f"Cleared cache for lesson {lesson_id}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to clear lesson cache: {e}")
+            return False
     
     async def validate_file_upload(
         self, 

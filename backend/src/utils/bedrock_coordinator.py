@@ -23,15 +23,15 @@ class BedrockRequestCoordinator:
     """
     
     def __init__(self):
-        # Global lock for all Bedrock requests
-        self._request_lock = asyncio.Lock()
-        
+        # Global lock for all Bedrock requests (lazy initialization)
+        self._request_lock: Optional[asyncio.Lock] = None
+
         # Track last request time for spacing
         self._last_request_time = 0.0
-        
+
         # Minimum delay between ANY Bedrock requests (adjusted for Haiku)
         self._min_request_interval = 2.0  # 2 seconds between requests (reasonable for Haiku)
-        
+
         # Track request statistics
         self._stats = {
             'total_requests': 0,
@@ -40,9 +40,14 @@ class BedrockRequestCoordinator:
             'total_wait_time': 0.0,
             'throttled_requests': 0
         }
+
+    def _ensure_lock(self):
+        """Lazily initialize the asyncio lock when first needed."""
+        if self._request_lock is None:
+            self._request_lock = asyncio.Lock()
     
     async def execute_bedrock_request(
-        self, 
+        self,
         request_type: str,  # 'agent' or 'model'
         func: Callable,
         *args,
@@ -50,10 +55,13 @@ class BedrockRequestCoordinator:
     ) -> Any:
         """
         Execute a Bedrock request with global coordination.
-        
+
         This method ensures that ALL Bedrock requests are properly spaced
         to prevent throttling, regardless of the calling service.
         """
+        # Ensure lock is initialized
+        self._ensure_lock()
+
         async with self._request_lock:
             # Calculate required wait time
             current_time = time.time()

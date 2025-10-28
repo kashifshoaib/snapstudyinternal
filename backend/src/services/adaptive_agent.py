@@ -26,6 +26,7 @@ from ..config import settings
 from ..utils.token_counter import token_counter
 from ..utils.rate_limiter import bedrock_rate_limiter
 from ..utils.bedrock_coordinator import bedrock_coordinator
+from ..utils.aws_client import get_boto3_client
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +59,8 @@ class BedrockAgentCore:
     """
     
     def __init__(self):
-        self.bedrock_agent_client = boto3.client('bedrock-agent-runtime', region_name=settings.aws_region)
-        self.bedrock_client = boto3.client('bedrock-runtime', region_name=settings.aws_region)
+        self.bedrock_agent_client = get_boto3_client('bedrock-agent-runtime')
+        self.bedrock_client = get_boto3_client('bedrock-runtime')
 
         # Agent configuration - these will be set from infrastructure outputs
         self.learning_agent_id = getattr(settings, 'learning_agent_id', None)
@@ -1857,14 +1858,27 @@ class AdaptiveLearningAgent:
         # For now, we'll create a placeholder structure
         
         micro_lessons = []
+
+        # Get the actual lesson content
+        lesson_content = lesson.get('content', lesson.get('description', ''))
+        if not lesson_content:
+            raise ValueError("Lesson has no content to generate micro-lessons from")
+
+        logger.info(f"Generating {3} micro-lessons from content (length: {len(lesson_content)} chars)")
+        logger.debug(f"Lesson content preview: {lesson_content[:200]}...")
+
         for i in range(3):  # Generate 3 initial micro-lessons
+            logger.info(f"Generating micro-lesson {i + 1}/3...")
+
             micro_lesson = await self.bedrock.generate_micro_lesson(
-                topic_content=lesson.get('description', 'Learning content'),
+                topic_content=lesson_content,
                 user_profile=user,
                 sequence_number=i + 1,
                 total_lessons=3
             )
-            
+
+            logger.info(f"✅ Micro-lesson {i + 1} generated: {micro_lesson.get('title', 'Untitled')}")
+
             micro_lesson_record = await self.db.create_micro_lesson({
                 'lesson_id': lesson['lesson_id'],
                 'sequence_number': i + 1,
@@ -1874,57 +1888,138 @@ class AdaptiveLearningAgent:
                 'key_concepts': micro_lesson.get('key_concepts', []),
                 'estimated_duration_minutes': micro_lesson.get('estimated_duration_minutes', 15),
                 'difficulty_level': user.get('difficulty_level', 'intermediate'),
-                'learning_objectives': micro_lesson.get('learning_objectives', [])
+                'learning_objectives': micro_lesson.get('learning_objectives', []),
+                'examples': micro_lesson.get('examples', []),
+                'visual_aids': micro_lesson.get('visual_aids', [])
             })
-            
+
             micro_lessons.append(micro_lesson_record)
-        
+
+            # Generate quiz ONLY for the first micro-lesson
+            if i == 0:
+                logger.info(f"Generating quiz for first micro-lesson...")
+
+                quiz = await self.bedrock.generate_quiz(
+                    lesson_content=micro_lesson.get('content', ''),
+                    difficulty_level=user.get('difficulty_level', 'intermediate'),
+                    num_questions=3
+                )
+
+                quiz_record = await self.db.create_quiz({
+                    'micro_lesson_id': micro_lesson_record['micro_lesson_id'],
+                    'lesson_id': lesson['lesson_id'],
+                    'questions': quiz.get('questions', []),
+                    'total_questions': quiz.get('total_questions', 3),
+                    'passing_score': quiz.get('passing_score', 0.7)
+                })
+
+                logger.info(f"✅ Quiz generated for first micro-lesson: {quiz_record['quiz_id']}")
+
+        # Cache the generated micro-lessons to S3
+        try:
+            from .s3 import s3_service
+
+            # Format micro-lessons for caching (matching API response format)
+            formatted_lessons = []
+            for ml in micro_lessons:
+                formatted_lesson = {
+                    "micro_lesson_id": ml.get("micro_lesson_id"),
+                    "lesson_id": ml.get("lesson_id"),
+                    "title": ml.get("title", ""),
+                    "content": ml.get("content", ""),
+                    "summary": ml.get("summary", ""),
+                    "order": ml.get("sequence_number", 0),
+                    "estimated_duration_minutes": ml.get("estimated_duration_minutes", 5),
+                    "key_concepts": ml.get("key_concepts", []),
+                    "learning_objectives": ml.get("learning_objectives", []),
+                    "examples": ml.get("examples", []),
+                    "visual_aids": ml.get("visual_aids", []),
+                    "quiz": None
+                }
+                formatted_lessons.append(formatted_lesson)
+
+            # Add quiz to first micro-lesson if it exists
+            if formatted_lessons and quiz_record:
+                formatted_lessons[0]["quiz"] = {
+                    "quiz_id": quiz_record.get("quiz_id"),
+                    "questions": quiz_record.get("questions", []),
+                    "total_questions": quiz_record.get("total_questions", 0),
+                    "passing_score": quiz_record.get("passing_score", 0.7)
+                }
+
+            await s3_service.cache_lesson_data(lesson['lesson_id'], 'micro_lessons', formatted_lessons)
+            logger.info(f"✅ Cached {len(formatted_lessons)} micro-lessons to S3")
+        except Exception as cache_error:
+            logger.warning(f"Failed to cache micro-lessons to S3: {cache_error}")
+
         return micro_lessons
     
     async def _get_next_micro_lesson(
-        self, 
-        session_state: Dict[str, Any], 
+        self,
+        session_state: Dict[str, Any],
         user: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Get the next micro-lesson for the session."""
-        
+
         lesson_id = session_state['lesson_id']
         micro_lessons = await self.db.get_lesson_micro_lessons(lesson_id)
-        
+
         if not micro_lessons:
             # Generate first micro-lesson
             lesson = await self.db.get_lesson(lesson_id)
             micro_lessons = await self._generate_initial_micro_lessons(lesson, user)
-        
+
         # Return first micro-lesson
         if micro_lessons:
             first_lesson = micro_lessons[0]
-            
-            # Generate quiz for this micro-lesson
-            quiz = await self.bedrock.generate_quiz(
-                lesson_content=first_lesson.get('content', ''),
-                difficulty_level=user.get('difficulty_level', 'intermediate'),
-                num_questions=3
-            )
-            
-            quiz_record = await self.db.create_quiz({
-                'micro_lesson_id': first_lesson['micro_lesson_id'],
-                'questions': quiz.get('questions', []),
-                'total_questions': quiz.get('total_questions', 3),
-                'passing_score': quiz.get('passing_score', 0.7)
-            })
-            
+
+            # Check if quiz already exists for the first micro-lesson
+            existing_quiz = await self.db.get_micro_lesson_quiz(first_lesson['micro_lesson_id'])
+
+            if existing_quiz:
+                # Use existing quiz
+                logger.info(f"Using existing quiz for micro-lesson: {first_lesson['micro_lesson_id']}")
+                quiz_data = {
+                    'quiz_id': existing_quiz['quiz_id'],
+                    'questions': existing_quiz.get('questions', []),
+                    'total_questions': existing_quiz.get('total_questions', 3),
+                    'passing_score': existing_quiz.get('passing_score', 0.7)
+                }
+            else:
+                # Generate quiz for this micro-lesson (fallback)
+                logger.info(f"Generating new quiz for micro-lesson: {first_lesson['micro_lesson_id']}")
+                quiz = await self.bedrock.generate_quiz(
+                    lesson_content=first_lesson.get('content', ''),
+                    difficulty_level=user.get('difficulty_level', 'intermediate'),
+                    num_questions=3
+                )
+
+                quiz_record = await self.db.create_quiz({
+                    'micro_lesson_id': first_lesson['micro_lesson_id'],
+                    'lesson_id': lesson_id,
+                    'questions': quiz.get('questions', []),
+                    'total_questions': quiz.get('total_questions', 3),
+                    'passing_score': quiz.get('passing_score', 0.7)
+                })
+
+                quiz_data = {
+                    'quiz_id': quiz_record['quiz_id'],
+                    'questions': quiz.get('questions', []),
+                    'total_questions': quiz.get('total_questions', 3),
+                    'passing_score': quiz.get('passing_score', 0.7)
+                }
+
             return {
                 'micro_lesson_id': first_lesson['micro_lesson_id'],
-                'quiz_id': quiz_record['quiz_id'],
+                'quiz_id': quiz_data['quiz_id'],
                 'title': first_lesson.get('title'),
                 'content': first_lesson.get('content'),
                 'summary': first_lesson.get('summary'),
                 'key_concepts': first_lesson.get('key_concepts', []),
                 'estimated_duration': first_lesson.get('estimated_duration_minutes', 15),
-                'quiz': quiz
+                'quiz': quiz_data
             }
-        
+
         return {}
     
     async def _record_performance(

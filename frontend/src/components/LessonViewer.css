@@ -6,6 +6,106 @@
   justify-content: center;
   padding: 2rem;
   text-align: center;
+  min-height: 300px;
+}
+
+/* Processing State Styling */
+.processing-state {
+  background: #fff;
+  border-radius: 8px;
+  padding: 2rem;
+  margin: 1rem 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.processing-header h3 {
+  color: #333;
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem;
+  font-weight: 500;
+}
+
+.processing-header p {
+  color: #666;
+  margin: 0 0 1.5rem;
+  font-size: 0.95rem;
+}
+
+.processing-progress {
+  margin-top: 1.5rem;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: #e8ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-bar-fill.animating {
+  width: 100%;
+  animation: indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-text {
+  color: #999;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Micro-Lesson Card Styling - Match original theme */
+.adaptive-lesson-container {
+  width: 100%;
+}
+
+.current-lesson {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.05);
+  margin-bottom: 12px;
+}
+
+.lesson-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.lesson-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--snap-900);
+  font-weight: 600;
+}
+
+.lesson-sequence {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--snap-050);
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
 .loading-spinner {
@@ -99,13 +199,21 @@
 }
 
 .icon-btn.primary {
-  background-color: #007bff;
+  background: linear-gradient(135deg, var(--snap-500), var(--snap-700));
   color: white;
   font-weight: 600;
+  border: none;
+  box-shadow: 0 2px 8px rgba(124,58,237,0.25);
 }
 
 .icon-btn.primary:hover:not(:disabled) {
-  background-color: #0056b3;
+  background: linear-gradient(135deg, var(--snap-600), var(--snap-900));
+  box-shadow: 0 4px 12px rgba(124,58,237,0.35);
+  transform: translateY(-1px);
+}
+
+.icon-btn.primary .ico svg {
+  fill: white;
 }
 
 .icon-btn:disabled {

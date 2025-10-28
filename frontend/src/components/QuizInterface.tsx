@@ -10,16 +10,20 @@ import './QuizInterface.css';
 
 interface QuizInterfaceProps {
   lessonId: string;
+  microLessonId?: string;
+  existingQuiz?: any; // Quiz data if already generated
   user: User;
   onQuizComplete?: (results: QuizResultsType) => void;
   onClose?: () => void;
 }
 
-const QuizInterface: React.FC<QuizInterfaceProps> = ({ 
-  lessonId, 
-  user, 
-  onQuizComplete, 
-  onClose 
+const QuizInterface: React.FC<QuizInterfaceProps> = ({
+  lessonId,
+  microLessonId,
+  existingQuiz,
+  user,
+  onQuizComplete,
+  onClose
 }) => {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -37,8 +41,8 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({
   const { setLoading, isLoading } = useLoadingState();
 
   useEffect(() => {
-    generateQuiz();
-  }, [lessonId]);
+    loadOrGenerateQuiz();
+  }, [lessonId, microLessonId, existingQuiz]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -48,34 +52,137 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({
     return () => clearInterval(timer);
   }, [startTime]);
 
-  const generateQuiz = async () => {
+  const loadOrGenerateQuiz = async () => {
     try {
       setLoading('quiz', true, { timeout: 10000 });
       setError(null);
-      
-      // Generate adaptive quiz based on user preferences and performance
-      const quizData = await quizService.generateQuiz(
-        lessonId, 
-        user.preferences?.difficulty_level || 'adaptive',
-        5 // Default number of questions
+
+      // If we have an existing quiz from the micro-lesson, use it
+      if (existingQuiz && existingQuiz.questions && existingQuiz.questions.length > 0) {
+        console.log('✅ Using existing quiz for micro-lesson:', microLessonId);
+
+        // Format the existing quiz to match expected Quiz type
+        const formattedQuiz: Quiz = {
+          quiz_id: existingQuiz.quiz_id,
+          micro_lesson_id: microLessonId,
+          lesson_id: lessonId,
+          questions: existingQuiz.questions.map((q: any, index: number) => {
+            // Handle different question types
+            let options = q.options || q.choices || [];
+
+            // For true/false questions, ensure we have options
+            if (q.question_type === 'true_false' && options.length === 0) {
+              options = ['True', 'False'];
+            }
+
+            // For short answer questions without options, create empty array
+            if (q.question_type === 'short_answer' && options.length === 0) {
+              options = [];
+            }
+
+            return {
+              id: q.id || q.question_id || `q${index}`,
+              question: q.question || q.question_text || '',
+              options: options,
+              correct_answer: q.correct_answer || q.answer,
+              question_type: q.question_type
+            };
+          }),
+          total_questions: existingQuiz.total_questions || existingQuiz.questions.length,
+          passing_score: existingQuiz.passing_score || 0.7,
+          difficulty_level: user.preferences?.difficulty_level || 'intermediate',
+          estimated_duration_minutes: existingQuiz.questions.length * 2,
+          quiz_metadata: {
+            total_questions: existingQuiz.total_questions || existingQuiz.questions.length,
+            passing_score: existingQuiz.passing_score || 0.7,
+            difficulty_level: user.preferences?.difficulty_level || 'intermediate',
+            estimated_duration_minutes: existingQuiz.questions.length * 2
+          }
+        };
+
+        setQuiz(formattedQuiz);
+        setQuestionStartTime(Date.now());
+        quizService.startQuizTimer();
+
+        await analyticsService.trackEngagementEvent('quiz_loaded', {
+          quiz_id: formattedQuiz.quiz_id,
+          lesson_id: lessonId,
+          micro_lesson_id: microLessonId,
+          num_questions: formattedQuiz.total_questions
+        });
+
+        return;
+      }
+
+      // Otherwise, generate a new quiz for this micro-lesson
+      console.log('⚠️ No existing quiz found, generating new one for micro-lesson...');
+
+      // Ensure microLessonId is defined
+      if (!microLessonId) {
+        throw new Error('Micro-lesson ID is required to generate quiz');
+      }
+
+      const quizData = await quizService.generateQuizForMicroLesson(
+        microLessonId,
+        user.preferences?.difficulty_level || 'intermediate',
+        5
       );
-      
-      setQuiz(quizData);
+
+      // Format the generated quiz
+      const formattedQuiz: Quiz = {
+        quiz_id: quizData.quiz_id,
+        micro_lesson_id: quizData.micro_lesson_id,
+        lesson_id: quizData.lesson_id,
+        questions: quizData.questions.map((q: any, index: number) => {
+          // Handle different question types
+          let options = q.options || q.choices || [];
+
+          // For true/false questions, ensure we have options
+          if (q.question_type === 'true_false' && options.length === 0) {
+            options = ['True', 'False'];
+          }
+
+          // For short answer questions without options, create empty array
+          if (q.question_type === 'short_answer' && options.length === 0) {
+            options = [];
+          }
+
+          return {
+            id: q.id || q.question_id || `q${index}`,
+            question: q.question || q.question_text || '',
+            options: options,
+            correct_answer: q.correct_answer || q.answer,
+            question_type: q.question_type
+          };
+        }),
+        total_questions: quizData.total_questions,
+        passing_score: quizData.passing_score,
+        difficulty_level: quizData.difficulty_level,
+        estimated_duration_minutes: quizData.estimated_duration_minutes,
+        quiz_metadata: {
+          total_questions: quizData.total_questions,
+          passing_score: quizData.passing_score,
+          difficulty_level: quizData.difficulty_level,
+          estimated_duration_minutes: quizData.estimated_duration_minutes
+        }
+      };
+
+      setQuiz(formattedQuiz);
       setQuestionStartTime(Date.now());
       quizService.startQuizTimer();
-      
-      // Track quiz generation
+
       await analyticsService.trackEngagementEvent('quiz_generated', {
-        quiz_id: quizData.quiz_id,
+        quiz_id: formattedQuiz.quiz_id,
         lesson_id: lessonId,
-        difficulty: quizData.difficulty_level,
-        num_questions: quizData.total_questions,
-        adaptive_features: quizData.quiz_metadata.adaptive_features || []
+        micro_lesson_id: microLessonId,
+        difficulty: formattedQuiz.difficulty_level,
+        num_questions: formattedQuiz.total_questions,
+        adaptive_features: formattedQuiz.quiz_metadata?.adaptive_features || []
       });
-      
+
     } catch (error) {
-      console.error('Failed to generate quiz:', error);
-      setError('Failed to generate quiz. Please try again.');
+      console.error('Failed to load/generate quiz:', error);
+      setError('Failed to load quiz. Please try again.');
     } finally {
       setLoading('quiz', false);
     }
@@ -265,7 +372,22 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({
   const isQuizComplete = quiz && Object.keys(answers).length === quiz.questions.length;
 
   if (isLoading('quiz') && !quiz) {
-    return <SkeletonQuiz className="quiz-interface-skeleton" />;
+    return (
+      <div className="quiz-interface generating">
+        <div className="quiz-generation-state">
+          <div className="generation-header">
+            <h3>🎯 Generating Your Quiz</h3>
+            <p>Creating personalized questions based on your lesson...</p>
+          </div>
+          <div className="generation-progress">
+            <div className="quiz-progress-bar-container">
+              <div className="quiz-progress-bar-fill animating"></div>
+            </div>
+            <p className="generation-progress-text">This usually takes 10-20 seconds</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -274,7 +396,7 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({
         <div className="error-message">
           <h3>Oops! Something went wrong</h3>
           <p>{error}</p>
-          <button onClick={generateQuiz} className="retry-button">
+          <button onClick={loadOrGenerateQuiz} className="retry-button">
             Try Again
           </button>
           {onClose && (
@@ -289,25 +411,39 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({
 
   if (results) {
     return (
-      <QuizResults 
-        results={results} 
+      <QuizResults
+        results={results}
         quiz={quiz!}
         onRetakeQuiz={() => {
           setResults(null);
           setAnswers({});
           setCurrentQuestionIndex(0);
-          generateQuiz();
+          loadOrGenerateQuiz();
         }}
         onClose={onClose}
       />
     );
   }
 
-  if (!quiz) {
+  if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+    return null;
+  }
+
+  // Safety check: ensure currentQuestionIndex is valid
+  if (currentQuestionIndex >= quiz.questions.length) {
+    console.error('Invalid question index:', currentQuestionIndex, 'Total questions:', quiz.questions.length);
+    setCurrentQuestionIndex(quiz.questions.length - 1);
     return null;
   }
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
+
+  // Additional safety check for currentQuestion
+  if (!currentQuestion) {
+    console.error('Current question is undefined at index:', currentQuestionIndex);
+    return null;
+  }
+
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
   return (
@@ -340,38 +476,60 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({
       <div className="quiz-content">
         <div className="question-container">
           <h3 className="question-text">{currentQuestion.question}</h3>
-          
+
           <div className="answer-options">
-            <div className="multiple-choice">
-              {currentQuestion.options.map((option, index) => {
-                const isSelected = answers[currentQuestion.id] === option;
-                const feedback = answerFeedback[currentQuestion.id];
-                const showFeedbackForOption = feedback && isSelected;
-                
-                return (
-                  <label key={index} className={`option-label ${isSelected ? 'selected' : ''} ${showFeedbackForOption ? 'has-feedback' : ''}`}>
-                    <input
-                      type="radio"
-                      name={currentQuestion.id}
-                      value={option}
-                      checked={isSelected}
-                      onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                    />
-                    <span className="option-text">{option}</span>
-                    {showFeedbackForOption && (
-                      <div className={`immediate-feedback ${feedback.is_correct ? 'correct' : 'incorrect'}`}>
-                        <div className="feedback-icon">
-                          {feedback.is_correct ? '✓' : '✗'}
+            {currentQuestion.options && currentQuestion.options.length > 0 ? (
+              <div className="multiple-choice">
+                {currentQuestion.options.map((option, index) => {
+                  const isSelected = answers[currentQuestion.id] === option;
+                  const feedback = answerFeedback[currentQuestion.id];
+                  const showFeedbackForOption = feedback && isSelected;
+
+                  return (
+                    <label key={index} className={`option-label ${isSelected ? 'selected' : ''} ${showFeedbackForOption ? 'has-feedback' : ''}`}>
+                      <input
+                        type="radio"
+                        name={currentQuestion.id}
+                        value={option}
+                        checked={isSelected}
+                        onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                      />
+                      <span className="option-text">{option}</span>
+                      {showFeedbackForOption && (
+                        <div className={`immediate-feedback ${feedback.is_correct ? 'correct' : 'incorrect'}`}>
+                          <div className="feedback-icon">
+                            {feedback.is_correct ? '✓' : '✗'}
+                          </div>
+                          <div className="feedback-text">
+                            {feedback.feedback_text || (feedback.is_correct ? 'Correct!' : 'Not quite right.')}
+                          </div>
                         </div>
-                        <div className="feedback-text">
-                          {feedback.feedback_text || (feedback.is_correct ? 'Correct!' : 'Not quite right.')}
-                        </div>
-                      </div>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="short-answer">
+                <textarea
+                  className="short-answer-input"
+                  value={answers[currentQuestion.id] || ''}
+                  onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                  placeholder="Type your answer here..."
+                  rows={4}
+                />
+                {answerFeedback[currentQuestion.id] && (
+                  <div className={`immediate-feedback ${answerFeedback[currentQuestion.id].is_correct ? 'correct' : 'incorrect'}`}>
+                    <div className="feedback-icon">
+                      {answerFeedback[currentQuestion.id].is_correct ? '✓' : '✗'}
+                    </div>
+                    <div className="feedback-text">
+                      {answerFeedback[currentQuestion.id].feedback_text || 'Answer recorded'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {showHint && hint && (

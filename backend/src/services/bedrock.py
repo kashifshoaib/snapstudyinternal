@@ -13,6 +13,7 @@ from ..config import settings
 from ..utils.token_counter import token_counter
 from ..utils.rate_limiter import bedrock_rate_limiter
 from ..utils.bedrock_coordinator import bedrock_coordinator
+from ..utils.aws_client import get_boto3_client
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class BedrockService:
     """Service for AWS Bedrock operations with Amazon Nova Lite."""
     
     def __init__(self):
-        self.bedrock_client = boto3.client('bedrock-runtime', region_name=settings.aws_region)
+        self.bedrock_client = get_boto3_client('bedrock-runtime')
         self.model_id = settings.bedrock_model_id
         
         # Retry configuration optimized for Nova Lite
@@ -51,7 +52,7 @@ class BedrockService:
         error_code = error.response['Error']['Code']
         retryable_codes = [
             'ThrottlingException',
-            'TooManyRequestsException', 
+            'TooManyRequestsException',
             'ServiceUnavailableException',
             'InternalServerError',
             'InternalFailure',
@@ -60,6 +61,33 @@ class BedrockService:
             'ModelNotReadyException'
         ]
         return error_code in retryable_codes
+
+    def _extract_json_from_response(self, response: str) -> str:
+        """
+        Extract JSON from a response that may be wrapped in markdown code fences.
+
+        Handles responses like:
+        ```json
+        { ... }
+        ```
+
+        or just:
+        { ... }
+        """
+        response = response.strip()
+
+        # Check for markdown code fences
+        if response.startswith('```'):
+            # Find the first newline after the opening fence
+            first_newline = response.find('\n')
+            if first_newline != -1:
+                # Find the closing fence
+                closing_fence = response.rfind('```')
+                if closing_fence > first_newline:
+                    # Extract content between fences
+                    response = response[first_newline + 1:closing_fence].strip()
+
+        return response
     
     async def _retry_with_backoff(self, operation, *args, **kwargs):
         """Execute operation with exponential backoff retry logic."""
@@ -188,13 +216,13 @@ class BedrockService:
             )
             
             response_body = json.loads(response['body'].read())
-            
+
             # Parse Nova Lite response format
             if 'output' in response_body and 'message' in response_body['output']:
                 message = response_body['output']['message']
                 if 'content' in message and message['content']:
                     output_text = message['content'][0]['text']
-                    
+
                     # Log complete token usage
                     token_counter.log_token_usage(
                         operation="bedrock_nova_invoke",
@@ -202,24 +230,46 @@ class BedrockService:
                         output_text=output_text,
                         model_id=self.model_id
                     )
-                    
+
                     return output_text
-            
-            logger.error(f"Unexpected response format: {response_body}")
+
+            # Log detailed error information
+            logger.error(f"Unexpected Bedrock response format. Full response: {json.dumps(response_body, indent=2)}")
+            logger.error(f"Model ID used: {self.model_id}")
+            logger.error(f"AWS Region: {settings.aws_region}")
+            if settings.aws_profile:
+                logger.error(f"AWS Profile: {settings.aws_profile}")
             raise ValueError("Invalid response format from Nova Lite")
         
         try:
             # Use coordinator to space out the request, then apply retry logic
             async def _coordinated_invoke():
                 return await self._retry_with_backoff(_invoke_model)
-            
+
             return await bedrock_coordinator.execute_bedrock_request(
                 'model', _coordinated_invoke
             )
-            
+
         except ClientError as e:
-            logger.error(f"Bedrock API error after retries: {e}")
-            raise ValueError(f"Bedrock API error: {e.response['Error']['Message']}")
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            error_message = e.response.get('Error', {}).get('Message', str(e))
+
+            # Provide helpful error messages for common issues
+            if error_code in ['UnrecognizedClientException', 'InvalidSignatureException', 'SignatureDoesNotMatch']:
+                logger.error(f"AWS Credentials Error: {error_message}")
+                if settings.aws_profile:
+                    logger.error(f"Check that AWS profile '{settings.aws_profile}' is properly configured in ~/.aws/credentials")
+                raise ValueError(f"AWS credentials error - check your AWS_PROFILE setting: {error_message}")
+            elif error_code == 'AccessDeniedException':
+                logger.error(f"AWS Permissions Error: {error_message}")
+                logger.error(f"The AWS credentials do not have permission to invoke Bedrock model: {self.model_id}")
+                raise ValueError(f"Access denied - check IAM permissions for Bedrock: {error_message}")
+            elif error_code == 'ResourceNotFoundException':
+                logger.error(f"Bedrock Model Not Found: {self.model_id} in region {settings.aws_region}")
+                raise ValueError(f"Model {self.model_id} not found in region {settings.aws_region}")
+            else:
+                logger.error(f"Bedrock API error [{error_code}]: {error_message}")
+                raise ValueError(f"Bedrock API error: {error_message}")
         except Exception as e:
             logger.error(f"Error invoking Nova Lite after retries: {e}")
             raise ValueError(f"Error invoking Nova Lite: {str(e)}")
@@ -257,11 +307,14 @@ class BedrockService:
         
         try:
             response = await self.invoke_claude(prompt, max_tokens=4096, temperature=0.3, system_prompt=system_prompt)
-            
+
+            # Strip markdown code fences if present
+            cleaned_response = self._extract_json_from_response(response)
+
             # Parse JSON response
-            analysis = json.loads(response.strip())
+            analysis = json.loads(cleaned_response)
             return analysis
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON response: {e}")
             logger.error(f"Raw response: {response}")
@@ -325,12 +378,24 @@ class BedrockService:
         
         try:
             response = await self.invoke_claude(prompt, max_tokens=4096, temperature=0.7, system_prompt=system_prompt)
-            micro_lesson = json.loads(response.strip())
+
+            # Log the raw response for debugging
+            logger.debug(f"Raw Bedrock response (first 500 chars): {response[:500] if response else 'EMPTY RESPONSE'}")
+
+            if not response or not response.strip():
+                logger.error("Bedrock returned an empty response")
+                raise ValueError("Failed to generate micro-lesson: Empty response from Bedrock")
+
+            # Strip markdown code fences if present
+            cleaned_response = self._extract_json_from_response(response)
+
+            micro_lesson = json.loads(cleaned_response)
             return micro_lesson
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse micro-lesson JSON: {e}")
-            raise ValueError("Failed to generate micro-lesson")
+            logger.error(f"Response content that failed to parse: {response[:1000] if response else 'EMPTY'}")
+            raise ValueError("Failed to generate micro-lesson: Invalid JSON response")
     
     async def generate_quiz(
         self, 
@@ -394,11 +459,16 @@ class BedrockService:
         
         try:
             response = await self.invoke_claude(prompt, max_tokens=4096, temperature=0.5, system_prompt=system_prompt)
-            quiz = json.loads(response.strip())
+
+            # Strip markdown code fences if present
+            cleaned_response = self._extract_json_from_response(response)
+
+            quiz = json.loads(cleaned_response)
             return quiz
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse quiz JSON: {e}")
+            logger.error(f"Response content that failed to parse: {response[:1000] if response else 'EMPTY'}")
             raise ValueError("Failed to generate quiz")
     
     async def evaluate_quiz_answer(
@@ -434,50 +504,146 @@ class BedrockService:
         
         try:
             response = await self.invoke_claude(prompt, max_tokens=4096, temperature=0.3, system_prompt=system_prompt)
-            evaluation = json.loads(response.strip())
+
+            # Strip markdown code fences if present
+            cleaned_response = self._extract_json_from_response(response)
+
+            evaluation = json.loads(cleaned_response)
             return evaluation
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse evaluation JSON: {e}")
+            logger.error(f"Response content that failed to parse: {response[:1000] if response else 'EMPTY'}")
             raise ValueError("Failed to evaluate answer")
     
+    async def check_query_relevance(
+        self,
+        user_message: str,
+        lesson_context: str
+    ) -> Dict[str, Any]:
+        """
+        Check if user query is related to the current micro-lesson context.
+
+        Returns:
+            Dict with 'is_relevant' (bool), 'confidence' (float), and 'reason' (str)
+        """
+        system_prompt = """You are a content relevance analyzer. Determine if a user's query is related to the given lesson context."""
+
+        prompt = f"""
+        Analyze whether the user's query is related to the current lesson context.
+
+        Current Lesson Context:
+        {lesson_context[:800]}
+
+        User Query: {user_message}
+
+        Determine if the query is:
+        1. DIRECTLY related to the lesson content (asking about topics, concepts, or examples from this lesson)
+        2. TANGENTIALLY related (general questions about the subject area)
+        3. UNRELATED (completely off-topic, personal questions, or about different subjects)
+
+        Return ONLY valid JSON:
+        {{
+            "is_relevant": true/false,
+            "confidence": 0.0-1.0,
+            "reason": "Brief explanation",
+            "category": "DIRECTLY_RELATED" | "TANGENTIALLY_RELATED" | "UNRELATED"
+        }}
+        """
+
+        try:
+            response = await self.invoke_claude(prompt, max_tokens=512, temperature=0.3, system_prompt=system_prompt)
+            cleaned_response = self._extract_json_from_response(response)
+            relevance_check = json.loads(cleaned_response)
+
+            logger.info(f"Relevance check: {relevance_check}")
+            return relevance_check
+
+        except Exception as e:
+            logger.error(f"Failed to check query relevance: {e}")
+            # Default to allowing the query if check fails
+            return {
+                "is_relevant": True,
+                "confidence": 0.5,
+                "reason": "Unable to verify relevance",
+                "category": "TANGENTIALLY_RELATED"
+            }
+
     async def generate_chat_response(
-        self, 
-        user_message: str, 
+        self,
+        user_message: str,
         lesson_context: str,
-        chat_history: List[Dict[str, str]] = None
-    ) -> str:
-        """Generate contextual chat response for tutoring."""
-        system_prompt = """You are an AI tutor helping students learn. Be helpful, encouraging, and educational. Keep responses concise but informative."""
-        
+        chat_history: List[Dict[str, str]] = None,
+        check_relevance: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Generate contextual chat response for tutoring with optional relevance guardrail.
+
+        Returns:
+            Dict with 'response' (str), 'is_relevant' (bool), and 'relevance_info' (dict)
+        """
+        # Check if query is related to the lesson
+        relevance_info = None
+        if check_relevance and lesson_context:
+            relevance_info = await self.check_query_relevance(user_message, lesson_context)
+
+            # If query is unrelated, politely decline
+            if not relevance_info.get('is_relevant', True):
+                polite_decline = (
+                    "I appreciate your question, but I'm here to help you with the current lesson. "
+                    f"Your question seems to be about something different from what we're studying right now. "
+                    f"\n\nLet's focus on the lesson at hand. Feel free to ask me questions about:\n"
+                    f"- The key concepts in this lesson\n"
+                    f"- Examples or explanations of the topics covered\n"
+                    f"- Practice questions or summaries\n\n"
+                    f"How can I help you understand this lesson better?"
+                )
+
+                return {
+                    'response': polite_decline,
+                    'is_relevant': False,
+                    'relevance_info': relevance_info
+                }
+
+        system_prompt = """You are an AI tutor helping students learn. Be helpful, encouraging, and educational. Keep responses concise but informative. Focus on the current lesson context."""
+
         history_text = ""
         if chat_history:
             history_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history[-5:]])
-        
+
         prompt = f"""
         Current lesson context: {lesson_context[:1000]}
-        
+
         Recent conversation:
         {history_text}
-        
+
         Student message: {user_message}
-        
-        Provide a helpful response as an AI tutor. If the student asks for:
-        - /summarize: Provide a summary of the current lesson
-        - /explain [topic]: Explain the topic in simple terms
-        - /quiz: Suggest they take the quiz for this lesson
-        - /help: List available commands
-        
-        Keep responses under 200 words and be encouraging.
+
+        Provide a helpful response as an AI tutor focused on THIS LESSON. If the student asks for:
+        - Summary: Provide a summary of the current lesson
+        - Explanation: Explain concepts from this lesson in simple terms
+        - Quiz: Suggest they take the quiz for this lesson
+        - Examples: Provide examples related to this lesson
+
+        Keep responses under 200 words, be encouraging, and stay focused on the lesson content.
         """
-        
+
         try:
-            response = await self.invoke_claude(prompt, max_tokens=4096, temperature=0.7, system_prompt=system_prompt)
-            return response.strip()
-            
+            response_text = await self.invoke_claude(prompt, max_tokens=4096, temperature=0.7, system_prompt=system_prompt)
+
+            return {
+                'response': response_text.strip(),
+                'is_relevant': True,
+                'relevance_info': relevance_info
+            }
+
         except Exception as e:
             logger.error(f"Failed to generate chat response: {e}")
-            return "I'm sorry, I'm having trouble responding right now. Please try again."
+            return {
+                'response': "I'm sorry, I'm having trouble responding right now. Please try again.",
+                'is_relevant': True,
+                'relevance_info': None
+            }
 
 
 # Global service instance
