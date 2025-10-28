@@ -22,6 +22,10 @@ export interface Lesson {
   status: 'processing' | 'completed' | 'failed';
   created_at: string;
   updated_at: string;
+  original_filename?: string;
+  original_file_s3_key?: string;
+  original_file_size?: number;
+  original_file_content_type?: string;
 }
 
 export interface MicroLesson {

@@ -7,6 +7,7 @@ import LessonViewer from './LessonViewer';
 import MultimediaLibrary from './MultimediaLibrary';
 import StudyBuddy from './StudyBuddy';
 import UserSettings from './UserSettings';
+import MyLibrary from './MyLibrary';
 import Footer from './Footer';
 import './MainApp.css';
 
@@ -15,7 +16,7 @@ interface MainAppProps {
   onLogout?: () => void;
 }
 
-type ViewType = 'lessons' | 'settings';
+type ViewType = 'lessons' | 'library' | 'settings';
 
 const MainApp: React.FC<MainAppProps> = ({ user, onLogout }) => {
   const [currentView, setCurrentView] = useState<ViewType>('lessons');
@@ -169,6 +170,18 @@ const MainApp: React.FC<MainAppProps> = ({ user, onLogout }) => {
               user={user}
             />
           </aside>
+        </div>
+      ) : currentView === 'library' ? (
+        <div className="app-grid">
+          <section className="panel full-width" aria-label="My Library">
+            <MyLibrary
+              lessons={lessons}
+              onLessonSelect={(lesson) => {
+                setSelectedLesson(lesson);
+                setCurrentView('lessons');
+              }}
+            />
+          </section>
         </div>
       ) : (
         <div className="settings-view">

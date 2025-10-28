@@ -215,7 +215,7 @@ class LessonService {
   }
 
   async updateProgressSync(
-    lessonId: string, 
+    lessonId: string,
     progressData: {
       current_position: number;
       completed_micro_lessons: string[];
@@ -230,6 +230,28 @@ class LessonService {
     } catch (error) {
       console.error('Failed to update progress sync:', error);
       // Don't throw error as this is not critical
+    }
+  }
+
+  // Original File Access
+  async getOriginalFileUrl(lessonId: string): Promise<string> {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const baseUrl = api.defaults.baseURL || '';
+      return `${baseUrl}/api/v1/lessons/${lessonId}/original-file?token=${token}`;
+    } catch (error) {
+      console.error('Failed to get original file URL:', error);
+      throw new Error('Failed to get original file');
+    }
+  }
+
+  async viewOriginalFile(lessonId: string): Promise<void> {
+    try {
+      const url = await this.getOriginalFileUrl(lessonId);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Failed to view original file:', error);
+      throw error;
     }
   }
 }

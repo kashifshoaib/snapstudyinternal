@@ -437,27 +437,31 @@ class BedrockAgentCore:
         
         if 'understand_user_intent' in goal:
             return f"""
-Analyze this user message and determine their intent. Respond with JSON:
+Analyze this user message and determine their intent.
 
 User message: "{user_message}"
 Recent chat: {chat_history[-3:] if chat_history else 'None'}
 
 Determine the intent from these options:
 - summarization: wants lesson summary
-- explanation: wants concept explained  
+- explanation: wants concept explained
 - quiz_request: wants to be quizzed
 - progress_inquiry: wants progress info
 - help_request: needs general help
 - general_chat: casual conversation
 - encouragement: needs motivation
 
-Respond with JSON:
+IMPORTANT: Respond with ONLY valid JSON. The "response" field should contain ONLY the direct answer the user will see - NO analysis, NO thinking process, NO meta-commentary about the learning state. Just the natural, helpful answer.
+
+Example if user asks "what is covid-19":
 {{
-    "intent": "detected_intent",
-    "confidence": 0.8,
-    "response": "helpful response to user",
-    "reasoning": "why you chose this intent"
+    "intent": "explanation",
+    "confidence": 0.9,
+    "response": "COVID-19 is a respiratory illness caused by the SARS-CoV-2 virus. It spreads through respiratory droplets when infected people cough, sneeze, or talk. Common symptoms include fever, cough, and difficulty breathing. The name COVID-19 comes from 'CO' for corona, 'VI' for virus, 'D' for disease, and '19' for the year it was first identified.",
+    "reasoning": "User is asking for a basic explanation of COVID-19"
 }}
+
+Now respond with JSON for the user's actual message:
 """
         else:
             return f"""
@@ -465,11 +469,12 @@ You are an AI tutor. Help with this request: {goal}
 
 Context: {json.dumps(context, indent=2)}
 
-Provide a helpful response as JSON:
+IMPORTANT: Provide a helpful response as JSON. The "response" field should contain ONLY the direct answer the user will see - NO analysis, NO thinking process, NO meta-commentary. Just the natural, helpful answer.
+
 {{
-    "response": "your helpful response",
+    "response": "your direct, user-friendly response here",
     "confidence": 0.8,
-    "reasoning": "your reasoning"
+    "reasoning": "your internal reasoning for why you chose this response"
 }}
 """
 

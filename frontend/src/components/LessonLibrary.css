@@ -129,8 +129,134 @@
   color: #721c24;
 }
 
+/* My Library Styles */
+.library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.library-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.library-item:hover {
+  background: #f8f9fa;
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.library-item-icon {
+  min-width: 48px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.library-item-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.library-item-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.library-item-title {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.library-item-meta {
+  margin: 0 0 4px 0;
+  font-size: 0.85rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.library-item-date {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.library-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.action-button {
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.action-button.view-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.action-button.view-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.action-button.download-button {
+  background: white;
+  color: #667eea;
+  border: 1.5px solid #667eea;
+}
+
+.action-button.download-button:hover {
+  background: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.original-file-modal .modal-content {
+  max-width: 900px;
+  width: 90vw;
+  max-height: 90vh;
+}
+
 @media (max-width: 768px) {
   .lesson-library {
     margin-bottom: 20px;
+  }
+
+  .library-item-actions {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .action-button {
+    font-size: 0.8rem;
+    padding: 6px 10px;
   }
 }

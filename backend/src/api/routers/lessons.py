@@ -148,6 +148,15 @@ async def upload_lesson(
         content = await file.read()
         file_content = content.decode('utf-8') if file_ext in ['.txt', '.md'] else f"Uploaded file: {file.filename}"
 
+        # Upload original file to S3
+        from ...services.s3 import s3_service
+        s3_file_info = await s3_service.upload_file(
+            file_content=content,
+            file_name=file.filename,
+            user_id=current_user["user_id"],
+            content_type=file.content_type
+        )
+
         # Create lesson data for database with processing status
         lesson_data = {
             "user_id": current_user["user_id"],
@@ -158,7 +167,10 @@ async def upload_lesson(
             "status": "active",
             "processing_status": "processing",  # Mark as processing
             "file_type": file_ext,
-            "original_filename": file.filename
+            "original_filename": file.filename,
+            "original_file_s3_key": s3_file_info['object_key'],
+            "original_file_size": s3_file_info['file_size'],
+            "original_file_content_type": s3_file_info['content_type']
         }
 
         # Save to database
@@ -587,4 +599,66 @@ async def get_next_adaptive_content(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to load next content: {str(e)}"
+        )
+
+
+@router.get("/{lesson_id}/original-file")
+async def get_original_file(
+    lesson_id: str,
+    current_user: Dict[str, Any] = Depends(require_auth)
+):
+    """
+    Get the original uploaded file for a lesson.
+
+    Returns file content with proper content type for viewing/downloading.
+    """
+    try:
+        from ...services.dynamodb import db_service
+        from ...services.s3 import s3_service
+        from fastapi.responses import Response
+
+        # Get lesson from database
+        lesson = await db_service.get_lesson(lesson_id)
+
+        if not lesson:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Lesson not found"
+            )
+
+        # Verify user owns this lesson
+        if lesson.get('user_id') != current_user['user_id']:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+
+        # Check if original file exists
+        s3_key = lesson.get('original_file_s3_key')
+        if not s3_key:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Original file not found for this lesson"
+            )
+
+        # Download file from S3
+        file_data = await s3_service.download_file(s3_key)
+
+        # Return file with appropriate headers
+        return Response(
+            content=file_data['content'],
+            media_type=file_data.get('content_type', 'application/octet-stream'),
+            headers={
+                'Content-Disposition': f'inline; filename="{lesson.get("original_filename", "file")}"',
+                'Content-Length': str(file_data.get('file_size', len(file_data['content'])))
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get original file for lesson {lesson_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve original file: {str(e)}"
         )

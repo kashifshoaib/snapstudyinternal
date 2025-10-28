@@ -6,7 +6,7 @@ interface HeaderProps {
   user: User;
   userProfile: UserProfile | null;
   currentView: string;
-  onViewChange: (view: 'lessons' | 'settings') => void;
+  onViewChange: (view: 'lessons' | 'library' | 'settings') => void;
   onLogout?: () => void;
 }
 
@@ -42,6 +42,12 @@ const Header: React.FC<HeaderProps> = ({
           onClick={() => onViewChange('lessons')}
         >
           My Lessons
+        </button>
+        <button
+          className={`lessons-btn ${currentView === 'library' ? 'active' : ''}`}
+          onClick={() => onViewChange('library')}
+        >
+          My Library
         </button>
         <button
           className={`profile-icon-btn ${currentView === 'settings' ? 'active' : ''}`}

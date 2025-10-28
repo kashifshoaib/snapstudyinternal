@@ -8,6 +8,12 @@ interface StudyBuddyProps {
   user: User;
 }
 
+interface ExpandedMessages {
+  [key: string]: boolean;
+}
+
+const TRUNCATE_LENGTH = 500;
+
 // Paper plane icon for send button
 const PaperPlaneIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24">
@@ -15,12 +21,20 @@ const PaperPlaneIcon = () => (
   </svg>
 );
 
+// Format text with proper line breaks and structure
+const formatText = (text: string) => {
+  return text
+    .split('\n')
+    .map((line, i) => <p key={i}>{line || '\u00A0'}</p>);
+};
+
 const StudyBuddy: React.FC<StudyBuddyProps> = ({ lesson, user }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [expandedMessages, setExpandedMessages] = useState<ExpandedMessages>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize chat session and load history
@@ -176,15 +190,46 @@ const StudyBuddy: React.FC<StudyBuddyProps> = ({ lesson, user }) => {
     }
   };
 
+  const toggleExpand = (messageId: string) => {
+    setExpandedMessages(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId]
+    }));
+  };
+
+  const renderMessageContent = (msg: ChatMessage) => {
+    const isExpanded = expandedMessages[msg.id];
+    const shouldTruncate = msg.content.length > TRUNCATE_LENGTH;
+    const displayContent = shouldTruncate && !isExpanded
+      ? msg.content.substring(0, TRUNCATE_LENGTH) + '...'
+      : msg.content;
+
+    return (
+      <div className="message-content-wrapper">
+        <div className="message-text">
+          {formatText(displayContent)}
+        </div>
+        {shouldTruncate && (
+          <button
+            className="show-more-btn"
+            onClick={() => toggleExpand(msg.id)}
+          >
+            {isExpanded ? 'Show less' : 'Show more'}
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="panel-header">Study Buddy</div>
       <div className="panel-body tutor-panel">
         {error && (
-          <div className="error-message" style={{ 
-            color: '#e74c3c', 
-            padding: '8px', 
-            marginBottom: '8px', 
+          <div className="error-message" style={{
+            color: '#e74c3c',
+            padding: '8px',
+            marginBottom: '8px',
             fontSize: '14px',
             backgroundColor: '#fdf2f2',
             border: '1px solid #fecaca',
@@ -193,14 +238,14 @@ const StudyBuddy: React.FC<StudyBuddyProps> = ({ lesson, user }) => {
             {error}
           </div>
         )}
-        
+
         <div className="thread">
           {messages.map((msg) => (
             <div key={msg.id} className={`bubble ${msg.sender === 'ai' ? 'ai' : 'me'}`}>
-              {msg.content}
+              {renderMessageContent(msg)}
             </div>
           ))}
-          
+
           {isLoading && (
             <div className="bubble ai">
               <div className="typing-indicator">
@@ -210,7 +255,7 @@ const StudyBuddy: React.FC<StudyBuddyProps> = ({ lesson, user }) => {
               </div>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
         

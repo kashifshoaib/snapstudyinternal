@@ -54,18 +54,25 @@
     #ffffff;
 }
 
+/* Full-width panel for library view */
+.panel.full-width {
+  grid-column: 1 / -1;
+  border-right: none;
+  border-left: none;
+}
+
 @media (max-width: 768px) {
   .app-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
     height: auto;
   }
-  
+
   .panel {
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
-  
+
   .panel:last-child {
     border-left: none;
     border-bottom: none;
