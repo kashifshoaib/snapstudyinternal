@@ -37,7 +37,7 @@ class QuizService {
         num_questions: numQuestions || 5
       });
 
-      return response.data.data;
+      return response.data;
     } catch (error) {
       console.error('Error generating quiz:', error);
       throw error;
@@ -60,8 +60,8 @@ class QuizService {
   }
 
   async submitQuiz(
-    quizId: string, 
-    answers: Record<string, string>, 
+    quizId: string,
+    answers: Record<string, string>,
     timeSpent?: number,
     engagementMetrics?: Record<string, any>
   ): Promise<QuizResults> {
@@ -73,8 +73,8 @@ class QuizService {
         time_spent_seconds: timeSpent || (Date.now() - this.startTime) / 1000,
         engagement_metrics: engagementMetrics || {}
       });
-      
-      return response.data.data;
+
+      return response.data;
     } catch (error) {
       console.error('Error submitting quiz:', error);
       throw error;
@@ -84,7 +84,7 @@ class QuizService {
   async getQuizResults(quizId: string): Promise<QuizResults> {
     try {
       const response = await api.get(`/api/v1/quiz/results/${quizId}`);
-      return response.data.data;
+      return response.data;
     } catch (error) {
       console.error('Error fetching quiz results:', error);
       throw error;
@@ -96,12 +96,11 @@ class QuizService {
       const response = await api.post('/api/v1/quiz/hint', {
         quiz_id: quizId,
         question_id: questionId,
-        user_id: 'current', // Will be handled by auth middleware
-        user_context: context,
-        previous_attempts: previousAttempts || []
+        struggle_context: context || 'Student requested help',
+        previous_answers: previousAttempts || []
       });
-      
-      return response.data.data;
+
+      return response.data;
     } catch (error) {
       console.error('Error getting hint:', error);
       throw error;
@@ -116,8 +115,8 @@ class QuizService {
         user_id: 'current', // Will be handled by auth middleware
         difficulty_adjustment: difficultyAdjustment
       });
-      
-      return response.data.data;
+
+      return response.data;
     } catch (error) {
       console.error('Error regenerating question:', error);
       throw error;
@@ -127,7 +126,7 @@ class QuizService {
   async getQuizAnalytics(limit?: number): Promise<any> {
     try {
       const response = await api.get(`/api/v1/quiz/analytics/current?limit=${limit || 20}`);
-      return response.data.data;
+      return response.data;
     } catch (error) {
       console.error('Error fetching quiz analytics:', error);
       throw error;
@@ -139,11 +138,10 @@ class QuizService {
       const response = await api.post('/api/v1/quiz/immediate-feedback', {
         quiz_id: quizId,
         question_id: questionId,
-        user_answer: answer,
-        user_id: 'current' // Will be handled by auth middleware
+        user_answer: answer
       });
-      
-      return response.data.data;
+
+      return response.data;
     } catch (error) {
       console.error('Error getting immediate feedback:', error);
       throw error;
